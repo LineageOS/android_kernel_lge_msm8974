@@ -386,6 +386,10 @@ static void xhci_clear_port_change_bit(struct xhci_hcd *xhci, u16 wValue,
 		status = PORT_PLC;
 		port_change_bit = "link state";
 		break;
+	case USB_PORT_FEAT_C_PORT_CONFIG_ERROR:
+		status = PORT_CEC;
+		port_change_bit = "config error";
+		break;
 	default:
 		/* Should never happen */
 		return;
@@ -697,6 +701,8 @@ int xhci_hub_control(struct usb_hcd *hcd, u16 typeReq, u16 wValue,
 				status |= USB_PORT_STAT_C_LINK_STATE << 16;
 			if ((temp & PORT_WRC))
 				status |= USB_PORT_STAT_C_BH_RESET << 16;
+			if ((temp & PORT_CEC))
+				status |= USB_PORT_STAT_C_CONFIG_ERROR << 16;
 		}
 
 		if (hcd->speed != HCD_USB3) {
@@ -713,6 +719,7 @@ int xhci_hub_control(struct usb_hcd *hcd, u16 typeReq, u16 wValue,
 				xhci_dbg(xhci, "Resume USB2 port %d\n",
 					wIndex + 1);
 				bus_state->resume_done[wIndex] = 0;
+				clear_bit(wIndex, &bus_state->resuming_ports);
 				xhci_set_link_state(xhci, port_array, wIndex,
 							XDEV_U0);
 				xhci_dbg(xhci, "set port %d resume\n",
@@ -835,12 +842,39 @@ int xhci_hub_control(struct usb_hcd *hcd, u16 typeReq, u16 wValue,
 			break;
 		case USB_PORT_FEAT_LINK_STATE:
 			temp = xhci_readl(xhci, port_array[wIndex]);
+
+			/* Disable port */
+			if (link_state == USB_SS_PORT_LS_SS_DISABLED) {
+				xhci_dbg(xhci, "Disable port %d\n", wIndex);
+				temp = xhci_port_state_to_neutral(temp);
+				/*
+				 * Clear all change bits, so that we get a new
+				 * connection event.
+				 */
+				temp |= PORT_CSC | PORT_PEC | PORT_WRC |
+					PORT_OCC | PORT_RC | PORT_PLC |
+					PORT_CEC;
+				xhci_writel(xhci, temp | PORT_PE,
+					port_array[wIndex]);
+				temp = xhci_readl(xhci, port_array[wIndex]);
+				break;
+			}
+
+			/* Put link in RxDetect (enable port) */
+			if (link_state == USB_SS_PORT_LS_RX_DETECT) {
+				xhci_dbg(xhci, "Enable port %d\n", wIndex);
+				xhci_set_link_state(xhci, port_array, wIndex,
+						link_state);
+				temp = xhci_readl(xhci, port_array[wIndex]);
+				break;
+			}
+
 			/* Software should not attempt to set
-			 * port link state above '5' (Rx.Detect) and the port
+			 * port link state above '3' (U3) and the port
 			 * must be enabled.
 			 */
 			if ((temp & PORT_PE) == 0 ||
-				(link_state > USB_SS_PORT_LS_RX_DETECT)) {
+				(link_state > USB_SS_PORT_LS_U3)) {
 				xhci_warn(xhci, "Cannot set link state.\n");
 				goto error;
 			}
@@ -985,6 +1019,7 @@ int xhci_hub_control(struct usb_hcd *hcd, u16 typeReq, u16 wValue,
 		case USB_PORT_FEAT_C_OVER_CURRENT:
 		case USB_PORT_FEAT_C_ENABLE:
 		case USB_PORT_FEAT_C_PORT_LINK_STATE:
+		case USB_PORT_FEAT_C_PORT_CONFIG_ERROR:
 			xhci_clear_port_change_bit(xhci, wValue, wIndex,
 					port_array[wIndex], temp);
 			break;
@@ -1030,9 +1065,14 @@ int xhci_hub_status_data(struct usb_hcd *hcd, char *buf)
 	/* Initial status is no changes */
 	retval = (max_ports + 8) / 8;
 	memset(buf, 0, retval);
-	status = 0;
 
-	mask = PORT_CSC | PORT_PEC | PORT_OCC | PORT_PLC | PORT_WRC;
+	/*
+	 * Inform the usbcore about resume-in-progress by returning
+	 * a non-zero value even if there are no status changes.
+	 */
+	status = bus_state->resuming_ports;
+
+	mask = PORT_CSC | PORT_PEC | PORT_OCC | PORT_PLC | PORT_WRC | PORT_CEC;
 
 	spin_lock_irqsave(&xhci->lock, flags);
 	/* For each port, did anything change?  If so, set that bit in buf. */
@@ -1070,15 +1110,11 @@ int xhci_bus_suspend(struct usb_hcd *hcd)
 	spin_lock_irqsave(&xhci->lock, flags);
 
 	if (hcd->self.root_hub->do_remote_wakeup) {
-		port_index = max_ports;
-		while (port_index--) {
-			if (bus_state->resume_done[port_index] != 0) {
-				spin_unlock_irqrestore(&xhci->lock, flags);
-				xhci_dbg(xhci, "suspend failed because "
-						"port %d is resuming\n",
-						port_index + 1);
-				return -EBUSY;
-			}
+		if (bus_state->resuming_ports ||	/* USB2 */
+		    bus_state->port_remote_wakeup) {	/* USB3 */
+			spin_unlock_irqrestore(&xhci->lock, flags);
+			xhci_dbg(xhci, "suspend failed because a port is resuming\n");
+			return -EBUSY;
 		}
 	}
 
