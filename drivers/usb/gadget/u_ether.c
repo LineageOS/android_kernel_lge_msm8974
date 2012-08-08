@@ -933,9 +933,14 @@ static int eth_stop(struct net_device *net)
 	spin_lock_irqsave(&dev->lock, flags);
 	if (dev->port_usb) {
 		struct gether	*link = dev->port_usb;
+		const struct usb_endpoint_descriptor *in;
+		const struct usb_endpoint_descriptor *out;
 
 		if (link->close)
 			link->close(link);
+
+		in = link->in_ep->desc;
+		out = link->out_ep->desc;
 
 		/* NOTE:  we have no abort-queue primitive we could use
 		 * to cancel all pending I/O.  Instead, we disable then
@@ -960,6 +965,8 @@ static int eth_stop(struct net_device *net)
 				return -EINVAL;
 			}
 			DBG(dev, "host still using in/out endpoints\n");
+			link->in_ep->desc = in;
+			link->out_ep->desc = out;
 			usb_ep_enable(link->in_ep);
 			usb_ep_enable(link->out_ep);
 		}
