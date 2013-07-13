@@ -2539,7 +2539,7 @@ static struct file *path_openat(int dfd, const char *pathname,
 	nd->intent.open.flags = open_to_namei_flags(op->open_flag);
 	nd->intent.open.create_mode = op->mode;
 
-	if (unlikely(filp->f_flags & O_TMPFILE)) {
+	if (unlikely(filp->f_flags & __O_TMPFILE)) {
 		error = do_tmpfile(dfd, pathname, nd, flags, op, filp);
 		goto out;
 	}
