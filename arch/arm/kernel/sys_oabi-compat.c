@@ -222,6 +222,9 @@ asmlinkage long sys_oabi_fcntl64(unsigned int fd, unsigned int cmd,
 	ret = sys_fcntl64(fd, cmd, local_arg);
 
 	switch (cmd) {
+	case F_GETLKP:
+	case F_SETLKP:
+	case F_SETLKPW:
 	case F_GETLK64:
 		if (!ret) {
 			user.l_type	= kernel.l_type;
