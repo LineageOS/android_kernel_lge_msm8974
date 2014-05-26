@@ -865,7 +865,7 @@ int usb_wwan_resume(struct usb_serial *serial)
 		portdata = usb_get_serial_port_data(port);
 
 		/* skip closed ports */
-		if (!portdata->opened)
+		if (!portdata || !portdata->opened)
 			continue;
 
 		for (j = 0; j < N_IN_URB; j++) {
@@ -889,6 +889,7 @@ int usb_wwan_resume(struct usb_serial *serial)
 		}
 		play_delayed(port);
 	}
+	intfdata->suspended = 0;
 	spin_unlock_irq(&intfdata->susp_lock);
 
 err_out:
