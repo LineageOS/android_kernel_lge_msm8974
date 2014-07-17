@@ -859,6 +859,8 @@ asmlinkage long sys_process_vm_writev(pid_t pid,
 				      unsigned long flags);
 asmlinkage long sys_seccomp(unsigned int op, unsigned int flags,
 			    const char __user *uargs);
+asmlinkage long sys_getrandom(char __user *buf, size_t count,
+			      unsigned int flags);
 //FEATURE_SDCARD_MEDIAEXN_SYSTEMCALL_ENCRYPTION[S]
 asmlinkage long sys_set_media_property(int value);
 asmlinkage long sys_set_media_ext(char *mediaExtList);
