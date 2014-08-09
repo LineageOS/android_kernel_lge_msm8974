@@ -410,6 +410,7 @@
 //FEATURE_SDCARD_MEDIAEXN_SYSTEMCALL_ENCRYPTION[E]
 #define __NR_seccomp			(__NR_SYSCALL_BASE+383)
 #define __NR_getrandom			(__NR_SYSCALL_BASE+384)
+#define __NR_memfd_create		(__NR_SYSCALL_BASE+385)
 
 /*
  * The following SWIs are ARM private.
