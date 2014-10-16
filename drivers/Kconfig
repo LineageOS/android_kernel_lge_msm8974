@@ -156,4 +156,6 @@ source "drivers/sensors/Kconfig"
 
 source "drivers/felica/Kconfig"
 
+source "drivers/android/Kconfig"
+
 endmenu
