@@ -31,7 +31,7 @@
 #include "udf_i.h"
 
 static int udf_pc_to_char(struct super_block *sb, unsigned char *from,
-			   int fromlen, unsigned char *to, int tolen)
+			  int fromlen, unsigned char *to, int tolen)
 {
 	struct pathComponent *pc;
 	int elen = 0;
