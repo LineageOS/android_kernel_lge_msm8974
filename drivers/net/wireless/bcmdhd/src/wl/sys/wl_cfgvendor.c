@@ -1536,6 +1536,34 @@ static int wl_cfgvendor_lstats_get_info(struct wiphy *wiphy,
 }
 #endif /* LINKSTAT_SUPPORT */
 
+static int wl_cfgvendor_set_country(struct wiphy *wiphy,
+	struct wireless_dev *wdev, const void  *data, int len)
+{
+	int err = BCME_ERROR, rem, type;
+	char country_code[WLC_CNTRY_BUF_SZ] = {0};
+	const struct nlattr *iter;
+
+	nla_for_each_attr(iter, data, len, rem) {
+		type = nla_type(iter);
+		switch (type) {
+			case ANDR_WIFI_ATTRIBUTE_COUNTRY:
+				memcpy(country_code, nla_data(iter),
+					MIN(nla_len(iter), WLC_CNTRY_BUF_SZ));
+				break;
+			default:
+				WL_ERR(("Unknown type: %d\n", type));
+				return err;
+		}
+	}
+
+	err = wldev_set_country(wdev->netdev, country_code, true, true);
+	if (err < 0) {
+		WL_ERR(("Set country failed ret:%d\n", err));
+	}
+
+	return err;
+}
+
 static const struct wiphy_vendor_command wl_vendor_cmds [] = {
 	{
 		{
