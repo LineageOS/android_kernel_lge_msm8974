@@ -172,6 +172,9 @@ static const bcmevent_name_str_t bcmevent_names[] = {
 	BCMEVENT_NAME(WLC_E_FBT_AUTH_REQ_IND),
 #endif /* WLFBT */
 	BCMEVENT_NAME(WLC_E_RMC_EVENT),
+#ifdef GSCAN_SUPPORT
+	BCMEVENT_NAME(WLC_E_PFN_SSID_EXT)
+#endif /* GSCAN_SUPPORT */
 };
 
 
