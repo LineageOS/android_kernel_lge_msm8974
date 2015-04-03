@@ -234,7 +234,8 @@ typedef BWL_PRE_PACKED_STRUCT struct bcm_event {
 
 #define WLC_E_RMC_EVENT			139	/* RMC event */
 #define WLC_E_PFN_SSID_EXT      142  /* SSID EXT event */
-#define WLC_E_LAST			143	/* highest val + 1 for range checking */
+#define WLC_E_ROAM_EXP_EVENT    143  /* Expanded roam event */
+#define WLC_E_LAST			144	/* highest val + 1 for range checking */
 
 #if (WLC_E_LAST > 140)
 #error "WLC_E_LAST: Invalid value for last event; must be <= 140."
