@@ -383,6 +383,13 @@ static int bluesleep_write_proc_lpm(struct file *file, const char *buffer,
 		BT_ERR("(bluesleep_write_proc_lpm) Unreg HCI notifier.");
 		/* HCI_DEV_UNREG */
 		bluesleep_stop();
+
+		/* flush pending works */
+		flush_delayed_work(&tx_timer_expired_workqueue);
+		flush_delayed_work(&tx_data_wakeup_workqueue);
+		flush_delayed_work(&bluesleep_start_workqueue);
+		flush_delayed_work(&bluesleep_stop_workqueue);
+
 		has_lpm_enabled = false;
 		//bsi->uport = NULL;
 	} else {
@@ -570,6 +577,9 @@ static void bluesleep_stop_wq(struct work_struct *work)
 	set_bit(BT_EXT_WAKE, &flags);
 	del_timer(&tx_timer);
 	clear_bit(BT_PROTO, &flags);
+
+	/* cancel sleep_workqueue */
+	cancel_delayed_work_sync(&sleep_workqueue);
 
 	if (test_bit(BT_ASLEEP, &flags)) {
 		clear_bit(BT_ASLEEP, &flags);
