@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "5f2577a7_39ba2ade",
+        "filename": "drivers/power/max17050_battery.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 1345,
+      "author": {
+        "id": 3962
+      },
+      "writtenOn": "2015-10-22T09:08:37Z",
+      "side": 0,
+      "message": "Don\u0027t remove this. If the L01F has a problem with it, block it out with #if !defined(CONFIG_MACH_MSM8974_G2_DCM)",
+      "range": {
+        "startLine": 1343,
+        "startChar": 5,
+        "endLine": 1345,
+        "endChar": 4
+      },
+      "revId": "5fdb67e26d01ff5f9047edd9adec1e945f83af3a",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
