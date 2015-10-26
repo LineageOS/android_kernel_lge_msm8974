@@ -1,0 +1,38 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "5f2577a7_a1881871",
+        "filename": "arch/arm/boot/dts/lge/msm8974-g2/msm8974-g2-dcm/msmsamarium-sim.dts",
+        "patchSetId": 3
+      },
+      "lineNbr": 1,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-10-26T23:37:32Z",
+      "side": 1,
+      "message": "Is this file actually needed? I thought samarium referred to some other SoC.",
+      "revId": "e9418610a816b5289fd5354fb07cd9bc00c629ca",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5f2577a7_817d1c70",
+        "filename": "drivers/power/max17050_battery.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1346,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-10-26T23:37:32Z",
+      "side": 1,
+      "message": "Couldn\u0027t you just ifndef this one line?",
+      "revId": "e9418610a816b5289fd5354fb07cd9bc00c629ca",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
