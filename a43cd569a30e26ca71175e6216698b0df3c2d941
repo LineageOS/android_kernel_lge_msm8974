@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "5f2577a7_d3ed2326",
+        "filename": "drivers/power/max17050_battery.c",
+        "patchSetId": 6
+      },
+      "lineNbr": 1404,
+      "author": {
+        "id": 3962
+      },
+      "writtenOn": "2015-10-31T05:49:47Z",
+      "side": 1,
+      "message": "whitespace",
+      "range": {
+        "startLine": 1404,
+        "startChar": 0,
+        "endLine": 1404,
+        "endChar": 1
+      },
+      "revId": "a43cd569a30e26ca71175e6216698b0df3c2d941",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
