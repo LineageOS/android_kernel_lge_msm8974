@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "ff6b8bd7_206c4e07",
+        "filename": "scripts/Makefile.lib",
+        "patchSetId": 5
+      },
+      "lineNbr": 30,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-12-16T05:21:01Z",
+      "side": 1,
+      "message": "As much as we hate trailing whitespace, you don\u0027t need to remove whitespace from your patchset if it\u0027s unrelated.",
+      "revId": "79e27282057c02924361ee617c41f2da334d7718",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
