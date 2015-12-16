@@ -50,6 +50,24 @@
       "revId": "79e27282057c02924361ee617c41f2da334d7718",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "ff6b8bd7_a334e8df",
+        "filename": "scripts/Makefile.lib",
+        "patchSetId": 5
+      },
+      "lineNbr": 30,
+      "author": {
+        "id": 13610
+      },
+      "writtenOn": "2015-12-16T06:43:45Z",
+      "side": 1,
+      "message": "It\u0027s my text editor (Atom), that auto formats the file. WIll fix",
+      "parentUuid": "ff6b8bd7_206c4e07",
+      "revId": "79e27282057c02924361ee617c41f2da334d7718",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
     }
   ]
 }
