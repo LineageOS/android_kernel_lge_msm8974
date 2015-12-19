@@ -4240,7 +4240,7 @@ static ssize_t show_f54_window_crack(struct lge_touch_data *ts, char *buf)
 	ret = sprintf(buf, "%d\n", f54_window_crack);
 	return ret;
 }
-#if defined(A1_only) || defined(CONFIG_LGE_Z_TOUCHSCREEN)
+#if (defined(A1_only) && !defined(CONFIG_MACH_MSM8974_G2_KDDI)) || defined(CONFIG_LGE_Z_TOUCHSCREEN)
 static ssize_t show_ime_drumming_status(struct lge_touch_data *ts, char *buf)
 {
 	int ret = 0;
@@ -5001,7 +5001,7 @@ static struct attribute *lge_touch_attribute_list[] = {
 #if defined(Z_GLOVE_TOUCH_SUPPORT)
 	&lge_touch_attr_glove_finger_enable.attr,
 #endif
-#if defined(A1_only) || defined(CONFIG_LGE_Z_TOUCHSCREEN)
+#if (defined(A1_only) && !defined(CONFIG_MACH_MSM8974_G2_KDDI)) || defined(CONFIG_LGE_Z_TOUCHSCREEN)
 	&lge_touch_attr_ime_status.attr,
 #endif
 #ifdef CUST_G2_TOUCH_WAKEUP_GESTURE
