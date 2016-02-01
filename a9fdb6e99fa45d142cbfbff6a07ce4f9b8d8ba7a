@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "1fcbff3d_14791ffb",
+        "filename": "arch/arm/boot/compressed/head.S",
+        "patchSetId": 2
+      },
+      "lineNbr": 619,
+      "author": {
+        "id": 12592
+      },
+      "writtenOn": "2016-02-01T06:50:53Z",
+      "side": 1,
+      "message": "We have it right here :)",
+      "range": {
+        "startLine": 619,
+        "startChar": 0,
+        "endLine": 619,
+        "endChar": 21
+      },
+      "revId": "a9fdb6e99fa45d142cbfbff6a07ce4f9b8d8ba7a",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
