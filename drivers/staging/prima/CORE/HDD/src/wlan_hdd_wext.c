@@ -7317,6 +7317,13 @@ static int __iw_set_packet_filter_params(struct net_device *dev,
         return -ENOMEM;
     }
 
+    if (!capable(CAP_NET_ADMIN))
+    {
+      VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_ERROR,
+		FL("permission check failed"));
+      return -EPERM;
+    }
+
     ret = wlan_hdd_set_filter(WLAN_HDD_GET_CTX(pAdapter), pRequest, pAdapter->sessionId);
     kfree(pRequest);
 
