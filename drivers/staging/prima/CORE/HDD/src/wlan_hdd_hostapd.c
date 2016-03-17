@@ -3061,6 +3061,16 @@ static int __iw_softap_setwpsie(struct net_device *dev,
 
    fwps_genie = wps_genie;
 
+   if (!capable(CAP_NET_ADMIN))
+   {
+     VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_ERROR,
+	       FL("permission check failed"));
+     return -EPERM;
+   }
+
+   if(!wrqu->data.length)
+      return 0;
+
    pSap_WPSIe = vos_mem_malloc(sizeof(tSap_WPSIE));
    if (NULL == pSap_WPSIe) 
    {
