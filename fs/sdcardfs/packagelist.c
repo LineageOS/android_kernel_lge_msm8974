@@ -19,9 +19,8 @@
  */
 
 #include "sdcardfs.h"
-#include "linux/hashtable.h"
+#include <linux/hashtable.h>
 #include <linux/delay.h>
-
 
 #include <linux/init.h>
 #include <linux/module.h>
@@ -29,25 +28,13 @@
 
 #include <linux/configfs.h>
 
-#define STRING_BUF_SIZE		(512)
-
 struct hashtable_entry {
-        struct hlist_node hlist;
-        void *key;
-	unsigned int value;
+	struct hlist_node hlist;
+	const char *key;
+	atomic_t value;
 };
 
-struct sb_list {
-	struct super_block *sb;
-	struct list_head list;
-};
-
-struct packagelist_data {
-	DECLARE_HASHTABLE(package_to_appid,8);
-	spinlock_t hashtable_lock;
-};
-
-static struct packagelist_data *pkgl_data_all;
+static DEFINE_HASHTABLE(package_to_appid, 8);
 
 static struct kmem_cache *hashtable_entry_cachep;
 
@@ -63,23 +50,22 @@ static unsigned int str_hash(const char *key) {
 	return h;
 }
 
-appid_t get_appid(void *pkgl_id, const char *app_name)
+appid_t get_appid(const char *app_name)
 {
-	struct packagelist_data *pkgl_dat = pkgl_data_all;
 	struct hashtable_entry *hash_cur;
 	struct hlist_node *h_n;
 	unsigned int hash = str_hash(app_name);
 	appid_t ret_id;
 
-	spin_lock(&pkgl_dat->hashtable_lock);
-	hash_for_each_possible(pkgl_dat->package_to_appid, hash_cur, h_n, hlist, hash) {
+	rcu_read_lock();
+	hash_for_each_possible_rcu(package_to_appid, hash_cur, h_n, hlist, hash) {
 		if (!strcasecmp(app_name, hash_cur->key)) {
-			ret_id = (appid_t)hash_cur->value;
-			spin_unlock(&pkgl_dat->hashtable_lock);
+			ret_id = atomic_read(&hash_cur->value);
+			rcu_read_unlock();
 			return ret_id;
 		}
 	}
-	spin_unlock(&pkgl_dat->hashtable_lock);
+	rcu_read_unlock();
 	return 0;
 }
 
@@ -120,26 +106,41 @@ int open_flags_to_access_mode(int open_flags) {
 	}
 }
 
-static int insert_str_to_int_lock(struct packagelist_data *pkgl_dat, char *key,
-		unsigned int value)
+static struct hashtable_entry *alloc_packagelist_entry(const char *key,
+		appid_t value)
+{
+	struct hashtable_entry *ret = kmem_cache_alloc(hashtable_entry_cachep,
+			GFP_KERNEL);
+	if (!ret)
+		return NULL;
+
+	ret->key = kstrdup(key, GFP_KERNEL);
+	if (!ret->key) {
+		kmem_cache_free(hashtable_entry_cachep, ret);
+		return NULL;
+	}
+
+	atomic_set(&ret->value, value);
+	return ret;
+}
+
+static int insert_packagelist_entry_locked(const char *key, appid_t value)
 {
 	struct hashtable_entry *hash_cur;
 	struct hashtable_entry *new_entry;
 	struct hlist_node *h_n;
 	unsigned int hash = str_hash(key);
 
-	hash_for_each_possible(pkgl_dat->package_to_appid, hash_cur, h_n, hlist, hash) {
+	hash_for_each_possible_rcu(package_to_appid, hash_cur, h_n, hlist, hash) {
 		if (!strcasecmp(key, hash_cur->key)) {
-			hash_cur->value = value;
+			atomic_set(&hash_cur->value, value);
 			return 0;
 		}
 	}
-	new_entry = kmem_cache_alloc(hashtable_entry_cachep, GFP_ATOMIC);
+	new_entry = alloc_packagelist_entry(key, value);
 	if (!new_entry)
 		return -ENOMEM;
-	new_entry->key = kstrdup(key, GFP_ATOMIC);
-	new_entry->value = value;
-	hash_add(pkgl_dat->package_to_appid, &new_entry->hlist, hash);
+	hash_add_rcu(package_to_appid, &new_entry->hlist, hash);
 	return 0;
 }
 
@@ -149,92 +150,78 @@ static void fixup_perms(struct super_block *sb, const char *key) {
 	}
 }
 
-static int insert_str_to_int(struct packagelist_data *pkgl_dat, char *key,
-		unsigned int value) {
-	int ret;
-	struct sdcardfs_sb_info *sbinfo;
-	mutex_lock(&sdcardfs_super_list_lock);
-	spin_lock(&pkgl_dat->hashtable_lock);
-	ret = insert_str_to_int_lock(pkgl_dat, key, value);
-	spin_unlock(&pkgl_dat->hashtable_lock);
-
-	list_for_each_entry(sbinfo, &sdcardfs_super_list, list) {
-		if (sbinfo) {
-			fixup_perms(sbinfo->sb, key);
-		}
-	}
-	mutex_unlock(&sdcardfs_super_list_lock);
-	return ret;
-}
-
-static void remove_str_to_int_lock(struct hashtable_entry *h_entry) {
-	kfree(h_entry->key);
-	hash_del(&h_entry->hlist);
-	kmem_cache_free(hashtable_entry_cachep, h_entry);
-}
-
-static void remove_str_to_int(struct packagelist_data *pkgl_dat, const char *key)
+static void fixup_all_perms(const char *key)
 {
 	struct sdcardfs_sb_info *sbinfo;
+	list_for_each_entry(sbinfo, &sdcardfs_super_list, list)
+		if (sbinfo)
+			fixup_perms(sbinfo->sb, key);
+}
+
+static int insert_packagelist_entry(const char *key, appid_t value)
+{
+	int err;
+
+	mutex_lock(&sdcardfs_super_list_lock);
+	err = insert_packagelist_entry_locked(key, value);
+	if (!err)
+		fixup_all_perms(key);
+	mutex_unlock(&sdcardfs_super_list_lock);
+
+	return err;
+}
+
+static void free_packagelist_entry(struct hashtable_entry *entry)
+{
+	kfree(entry->key);
+	hash_del_rcu(&entry->hlist);
+	kmem_cache_free(hashtable_entry_cachep, entry);
+}
+
+static void remove_packagelist_entry_locked(const char *key)
+{
 	struct hashtable_entry *hash_cur;
 	struct hlist_node *h_n;
 	unsigned int hash = str_hash(key);
-	mutex_lock(&sdcardfs_super_list_lock);
-	spin_lock(&pkgl_data_all->hashtable_lock);
-	hash_for_each_possible(pkgl_dat->package_to_appid, hash_cur, h_n, hlist, hash) {
+
+	hash_for_each_possible_rcu(package_to_appid, hash_cur, h_n, hlist, hash) {
 		if (!strcasecmp(key, hash_cur->key)) {
-			remove_str_to_int_lock(hash_cur);
-			break;
+			hash_del_rcu(&hash_cur->hlist);
+			synchronize_rcu();
+			free_packagelist_entry(hash_cur);
+			return;
 		}
 	}
-	spin_unlock(&pkgl_data_all->hashtable_lock);
-	list_for_each_entry(sbinfo, &sdcardfs_super_list, list) {
-		if (sbinfo) {
-			fixup_perms(sbinfo->sb, key);
-		}
-	}
+}
+
+static void remove_packagelist_entry(const char *key)
+{
+	mutex_lock(&sdcardfs_super_list_lock);
+	remove_packagelist_entry_locked(key);
+	fixup_all_perms(key);
 	mutex_unlock(&sdcardfs_super_list_lock);
 	return;
 }
 
-static void remove_all_hashentrys(struct packagelist_data *pkgl_dat)
+static void packagelist_destroy(void)
 {
 	struct hashtable_entry *hash_cur;
 	struct hlist_node *h_n;
 	struct hlist_node *h_t;
+	HLIST_HEAD(free_list);
 	int i;
 
-	spin_lock(&pkgl_data_all->hashtable_lock);
-	hash_for_each_safe(pkgl_dat->package_to_appid, i, h_t, h_n, hash_cur, hlist)
-                remove_str_to_int_lock(hash_cur);
-	spin_unlock(&pkgl_data_all->hashtable_lock);
+	mutex_lock(&sdcardfs_super_list_lock);
+	hash_for_each_rcu(package_to_appid, i, h_t, hash_cur, hlist) {
+		hash_del_rcu(&hash_cur->hlist);
+		hlist_add_head(&hash_cur->hlist, &free_list);
 
-	hash_init(pkgl_dat->package_to_appid);
-}
-
-static struct packagelist_data * packagelist_create(void)
-{
-	struct packagelist_data *pkgl_dat;
-
-	pkgl_dat = kmalloc(sizeof(*pkgl_dat), GFP_KERNEL | __GFP_ZERO);
-	if (!pkgl_dat) {
-               printk(KERN_ERR "sdcardfs: Failed to create hash\n");
-		return ERR_PTR(-ENOMEM);
 	}
-
-	spin_lock_init(&pkgl_dat->hashtable_lock);
-	hash_init(pkgl_dat->package_to_appid);
-
-	return pkgl_dat;
-}
-
-static void packagelist_destroy(struct packagelist_data *pkgl_dat)
-{
-	spin_lock(&pkgl_dat->hashtable_lock);
-	remove_all_hashentrys(pkgl_dat);
-	spin_unlock(&pkgl_dat->hashtable_lock);
+	synchronize_rcu();
+	hlist_for_each_entry_safe(hash_cur, h_t, h_n, &free_list, hlist)
+		free_packagelist_entry(hash_cur);
+	mutex_unlock(&sdcardfs_super_list_lock);
 	printk(KERN_INFO "sdcardfs: destroyed packagelist pkgld\n");
-	kfree(pkgl_dat);
 }
 
 struct package_appid {
@@ -262,9 +249,7 @@ static ssize_t package_appid_attr_show(struct config_item *item,
 				      struct configfs_attribute *attr,
 				      char *page)
 {
-	ssize_t count;
-	count = sprintf(page, "%d\n", get_appid(pkgl_data_all, item->ci_name));
-	return count;
+	return scnprintf(page, PAGE_SIZE, "%u\n", get_appid(item->ci_name));
 }
 
 static ssize_t package_appid_attr_store(struct config_item *item,
@@ -272,17 +257,14 @@ static ssize_t package_appid_attr_store(struct config_item *item,
 				       const char *page, size_t count)
 {
 	struct package_appid *package_appid = to_package_appid(item);
-	unsigned long tmp;
-	char *p = (char *) page;
+	unsigned int tmp;
 	int ret;
 
-	tmp = simple_strtoul(p, &p, 10);
-	if (!p || (*p && (*p != '\n')))
-		return -EINVAL;
+	ret = kstrtouint(page, 10, &tmp);
+	if (ret)
+		return ret;
 
-	if (tmp > INT_MAX)
-		return -ERANGE;
-	ret = insert_str_to_int(pkgl_data_all, item->ci_name, (unsigned int)tmp);
+	ret = insert_packagelist_entry(item->ci_name, tmp);
 	package_appid->add_pid = tmp;
 	if (ret)
 		return ret;
@@ -294,7 +276,7 @@ static void package_appid_release(struct config_item *item)
 {
 	printk(KERN_INFO "sdcardfs: removing %s\n", item->ci_dentry->d_name.name);
 	/* item->ci_name is freed already, so we rely on the dentry */
-	remove_str_to_int(pkgl_data_all, item->ci_dentry->d_name.name);
+	remove_packagelist_entry(item->ci_dentry->d_name.name);
 	kfree(to_package_appid(item));
 }
 
@@ -352,22 +334,21 @@ static ssize_t packages_attr_show(struct config_item *item,
 {
 	struct hashtable_entry *hash_cur;
 	struct hlist_node *h_t;
-	struct hlist_node *h_n;
 	int i;
 	int count = 0, written = 0;
-	char errormsg[] = "<truncated>\n";
+	const char errormsg[] = "<truncated>\n";
 
-	spin_lock(&pkgl_data_all->hashtable_lock);
-	hash_for_each_safe(pkgl_data_all->package_to_appid, i, h_t, h_n, hash_cur, hlist) {
-		written = scnprintf(page + count, PAGE_SIZE - sizeof(errormsg) - count, "%s %d\n", (char *)hash_cur->key, hash_cur->value);
+	rcu_read_lock();
+	hash_for_each_rcu(package_to_appid, i, h_t, hash_cur, hlist) {
+		written = scnprintf(page + count, PAGE_SIZE - sizeof(errormsg) - count, "%s %d\n",
+					(const char *)hash_cur->key, atomic_read(&hash_cur->value));
 		if (count + written == PAGE_SIZE - sizeof(errormsg)) {
 			count += scnprintf(page + count, PAGE_SIZE - count, errormsg);
 			break;
 		}
 		count += written;
 	}
-	spin_unlock(&pkgl_data_all->hashtable_lock);
-
+	rcu_read_unlock();
 
 	return count;
 }
@@ -438,7 +419,6 @@ int packagelist_init(void)
 		return -ENOMEM;
 	}
 
-	pkgl_data_all = packagelist_create();
 	configfs_sdcardfs_init();
         return 0;
 }
@@ -446,7 +426,7 @@ int packagelist_init(void)
 void packagelist_exit(void)
 {
 	configfs_sdcardfs_exit();
-	packagelist_destroy(pkgl_data_all);
+	packagelist_destroy();
 	if (hashtable_entry_cachep)
 		kmem_cache_destroy(hashtable_entry_cachep);
 }
