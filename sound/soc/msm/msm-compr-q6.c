@@ -210,7 +210,7 @@ static void compr_event_handler(uint32_t opcode,
 		break;
 	case ASM_DATA_EVENT_READ_DONE: {
 		pr_debug("ASM_DATA_EVENT_READ_DONE\n");
-		pr_debug("buf = %p, data = 0x%X, *data = %p,\n"
+		pr_debug("buf = %pK, data = 0x%X, *data = %pK,\n"
 			 "prtd->pcm_irq_pos = %d\n",
 				prtd->audio_client->port[OUT].buf,
 			 *(uint32_t *)prtd->audio_client->port[OUT].buf->data,
@@ -220,7 +220,7 @@ static void compr_event_handler(uint32_t opcode,
 		memcpy(prtd->audio_client->port[OUT].buf->data +
 			   prtd->pcm_irq_pos, (ptrmem + 2),
 			   COMPRE_CAPTURE_HEADER_SIZE);
-		pr_debug("buf = %p, updated data = 0x%X, *data = %p\n",
+		pr_debug("buf = %pK, updated data = 0x%X, *data = %pK\n",
 				prtd->audio_client->port[OUT].buf,
 			*(uint32_t *)(prtd->audio_client->port[OUT].buf->data +
 				prtd->pcm_irq_pos),
@@ -249,7 +249,7 @@ static void compr_event_handler(uint32_t opcode,
 	}
 	case ASM_DATA_EVENT_READ_COMPRESSED_DONE: {
 		pr_debug("ASM_DATA_EVENT_READ_COMPRESSED_DONE\n");
-		pr_debug("buf = %p, data = 0x%X, *data = %p,\n"
+		pr_debug("buf = %pK, data = 0x%X, *data = %pK,\n"
 			 "prtd->pcm_irq_pos = %d\n",
 				prtd->audio_client->port[OUT].buf,
 			 *(uint32_t *)prtd->audio_client->port[OUT].buf->data,
@@ -560,7 +560,7 @@ static int msm_compr_capture_prepare(struct snd_pcm_substream *substream)
 			read_param.paddr = (unsigned long)(buf[i].phys)
 					+ COMPRE_CAPTURE_HEADER_SIZE;
 			pr_debug("Push buffer [%d] to DSP, "\
-					"paddr: %p, vaddr: %p\n",
+					"paddr: %pK, vaddr: %pK\n",
 					i, (void *) read_param.paddr,
 					buf[i].data);
 			q6asm_async_read(prtd->audio_client, &read_param);
@@ -1110,7 +1110,7 @@ static int msm_compr_hw_params(struct snd_pcm_substream *substream,
 	dma_buf->addr =  buf[0].phys;
 	dma_buf->bytes = runtime->hw.buffer_bytes_max;
 
-	pr_debug("%s: buf[%p]dma_buf->area[%p]dma_buf->addr[%p]\n"
+	pr_debug("%s: buf[%pK]dma_buf->area[%pK]dma_buf->addr[%pK]\n"
 		 "dma_buf->bytes[%d]\n", __func__,
 		 (void *)buf, (void *)dma_buf->area,
 		 (void *)dma_buf->addr, dma_buf->bytes);
