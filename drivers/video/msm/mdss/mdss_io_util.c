@@ -22,13 +22,13 @@ void dss_reg_w(struct dss_io_data *io, u32 offset, u32 value, u32 debug)
 	u32 in_val;
 
 	if (!io || !io->base) {
-		DEV_ERR("%pS->%s: invalid input\n",
+		DEV_ERR("%pKS->%s: invalid input\n",
 			__builtin_return_address(0), __func__);
 		return;
 	}
 
 	if (offset > io->len) {
-		DEV_ERR("%pS->%s: offset out of range\n",
+		DEV_ERR("%pKS->%s: offset out of range\n",
 			__builtin_return_address(0), __func__);
 		return;
 	}
@@ -45,13 +45,13 @@ u32 dss_reg_r(struct dss_io_data *io, u32 offset, u32 debug)
 {
 	u32 value;
 	if (!io || !io->base) {
-		DEV_ERR("%pS->%s: invalid input\n",
+		DEV_ERR("%pKS->%s: invalid input\n",
 			__builtin_return_address(0), __func__);
 		return -EINVAL;
 	}
 
 	if (offset > io->len) {
-		DEV_ERR("%pS->%s: offset out of range\n",
+		DEV_ERR("%pKS->%s: offset out of range\n",
 			__builtin_return_address(0), __func__);
 		return -EINVAL;
 	}
@@ -89,14 +89,14 @@ int msm_dss_ioremap_byname(struct platform_device *pdev,
 	struct resource *res = NULL;
 
 	if (!pdev || !io_data) {
-		DEV_ERR("%pS->%s: invalid input\n",
+		DEV_ERR("%pKS->%s: invalid input\n",
 			__builtin_return_address(0), __func__);
 		return -EINVAL;
 	}
 
 	res = msm_dss_get_res_byname(pdev, IORESOURCE_MEM, name);
 	if (!res) {
-		DEV_ERR("%pS->%s: '%s' msm_dss_get_res_byname failed\n",
+		DEV_ERR("%pKS->%s: '%s' msm_dss_get_res_byname failed\n",
 			__builtin_return_address(0), __func__, name);
 		return -ENODEV;
 	}
@@ -104,7 +104,7 @@ int msm_dss_ioremap_byname(struct platform_device *pdev,
 	io_data->len = resource_size(res);
 	io_data->base = ioremap(res->start, io_data->len);
 	if (!io_data->base) {
-		DEV_ERR("%pS->%s: '%s' ioremap failed\n",
+		DEV_ERR("%pKS->%s: '%s' ioremap failed\n",
 			__builtin_return_address(0), __func__, name);
 		return -EIO;
 	}
@@ -115,7 +115,7 @@ int msm_dss_ioremap_byname(struct platform_device *pdev,
 void msm_dss_iounmap(struct dss_io_data *io_data)
 {
 	if (!io_data) {
-		DEV_ERR("%pS->%s: invalid input\n",
+		DEV_ERR("%pKS->%s: invalid input\n",
 			__builtin_return_address(0), __func__);
 		return;
 	}
@@ -141,7 +141,7 @@ int msm_dss_config_vreg(struct device *dev, struct dss_vreg *in_vreg,
 				curr_vreg->vreg_name);
 			rc = PTR_RET(curr_vreg->vreg);
 			if (rc) {
-				DEV_ERR("%pS->%s: %s get failed. rc=%d\n",
+				DEV_ERR("%pKS->%s: %s get failed. rc=%d\n",
 					 __builtin_return_address(0), __func__,
 					 curr_vreg->vreg_name, rc);
 				curr_vreg->vreg = NULL;
@@ -155,7 +155,7 @@ int msm_dss_config_vreg(struct device *dev, struct dss_vreg *in_vreg,
 					curr_vreg->min_voltage,
 					curr_vreg->max_voltage);
 				if (rc < 0) {
-					DEV_ERR("%pS->%s: %s set vltg fail\n",
+					DEV_ERR("%pKS->%s: %s set vltg fail\n",
 						__builtin_return_address(0),
 						__func__,
 						curr_vreg->vreg_name);
@@ -206,7 +206,7 @@ int msm_dss_enable_vreg(struct dss_vreg *in_vreg, int num_vreg, int enable)
 		for (i = 0; i < num_vreg; i++) {
 			rc = PTR_RET(in_vreg[i].vreg);
 			if (rc) {
-				DEV_ERR("%pS->%s: %s regulator error. rc=%d\n",
+				DEV_ERR("%pKS->%s: %s regulator error. rc=%d\n",
 					__builtin_return_address(0), __func__,
 					in_vreg[i].vreg_name, rc);
 				goto vreg_set_opt_mode_fail;
@@ -218,7 +218,7 @@ int msm_dss_enable_vreg(struct dss_vreg *in_vreg, int num_vreg, int enable)
 			rc = regulator_set_optimum_mode(in_vreg[i].vreg,
 				in_vreg[i].enable_load);
 			if (rc < 0) {
-				DEV_ERR("%pS->%s: %s set opt m fail\n",
+				DEV_ERR("%pKS->%s: %s set opt m fail\n",
 					__builtin_return_address(0), __func__,
 					in_vreg[i].vreg_name);
 				goto vreg_set_opt_mode_fail;
@@ -228,7 +228,7 @@ int msm_dss_enable_vreg(struct dss_vreg *in_vreg, int num_vreg, int enable)
 				usleep_range(in_vreg[i].post_on_sleep * 1000,
 					in_vreg[i].post_on_sleep * 1000);
 			if (rc < 0) {
-				DEV_ERR("%pS->%s: %s enable failed\n",
+				DEV_ERR("%pKS->%s: %s enable failed\n",
 					__builtin_return_address(0), __func__,
 					in_vreg[i].vreg_name);
 				goto disable_vreg;
@@ -275,14 +275,14 @@ int msm_dss_enable_gpio(struct dss_gpio *in_gpio, int num_gpio, int enable)
 	int i = 0, rc = 0;
 	if (enable) {
 		for (i = 0; i < num_gpio; i++) {
-			DEV_DBG("%pS->%s: %s enable\n",
+			DEV_DBG("%pKS->%s: %s enable\n",
 				__builtin_return_address(0), __func__,
 				in_gpio[i].gpio_name);
 
 			rc = gpio_request(in_gpio[i].gpio,
 				in_gpio[i].gpio_name);
 			if (rc < 0) {
-				DEV_ERR("%pS->%s: %s enable failed\n",
+				DEV_ERR("%pKS->%s: %s enable failed\n",
 					__builtin_return_address(0), __func__,
 					in_gpio[i].gpio_name);
 				goto disable_gpio;
@@ -291,7 +291,7 @@ int msm_dss_enable_gpio(struct dss_gpio *in_gpio, int num_gpio, int enable)
 		}
 	} else {
 		for (i = num_gpio-1; i >= 0; i--) {
-			DEV_DBG("%pS->%s: %s disable\n",
+			DEV_DBG("%pKS->%s: %s disable\n",
 				__builtin_return_address(0), __func__,
 				in_gpio[i].gpio_name);
 			if (in_gpio[i].gpio)
@@ -327,7 +327,7 @@ int msm_dss_get_clk(struct device *dev, struct dss_clk *clk_arry, int num_clk)
 		clk_arry[i].clk = clk_get(dev, clk_arry[i].clk_name);
 		rc = PTR_RET(clk_arry[i].clk);
 		if (rc) {
-			DEV_ERR("%pS->%s: '%s' get failed. rc=%d\n",
+			DEV_ERR("%pKS->%s: '%s' get failed. rc=%d\n",
 				__builtin_return_address(0), __func__,
 				clk_arry[i].clk_name, rc);
 			goto error;
@@ -349,14 +349,14 @@ int msm_dss_clk_set_rate(struct dss_clk *clk_arry, int num_clk)
 	for (i = 0; i < num_clk; i++) {
 		if (clk_arry[i].clk) {
 			if (DSS_CLK_AHB != clk_arry[i].type) {
-				DEV_DBG("%pS->%s: '%s' rate %ld\n",
+				DEV_DBG("%pKS->%s: '%s' rate %ld\n",
 					__builtin_return_address(0), __func__,
 					clk_arry[i].clk_name,
 					clk_arry[i].rate);
 				rc = clk_set_rate(clk_arry[i].clk,
 					clk_arry[i].rate);
 				if (rc) {
-					DEV_ERR("%pS->%s: %s failed. rc=%d\n",
+					DEV_ERR("%pKS->%s: %s failed. rc=%d\n",
 						__builtin_return_address(0),
 						__func__,
 						clk_arry[i].clk_name, rc);
@@ -364,7 +364,7 @@ int msm_dss_clk_set_rate(struct dss_clk *clk_arry, int num_clk)
 				}
 			}
 		} else {
-			DEV_ERR("%pS->%s: '%s' is not available\n",
+			DEV_ERR("%pKS->%s: '%s' is not available\n",
 				__builtin_return_address(0), __func__,
 				clk_arry[i].clk_name);
 			rc = -EPERM;
@@ -381,18 +381,18 @@ int msm_dss_enable_clk(struct dss_clk *clk_arry, int num_clk, int enable)
 
 	if (enable) {
 		for (i = 0; i < num_clk; i++) {
-			DEV_DBG("%pS->%s: enable '%s'\n",
+			DEV_DBG("%pKS->%s: enable '%s'\n",
 				__builtin_return_address(0), __func__,
 				clk_arry[i].clk_name);
 			if (clk_arry[i].clk) {
 				rc = clk_prepare_enable(clk_arry[i].clk);
 				if (rc)
-					DEV_ERR("%pS->%s: %s en fail. rc=%d\n",
+					DEV_ERR("%pKS->%s: %s en fail. rc=%d\n",
 						__builtin_return_address(0),
 						__func__,
 						clk_arry[i].clk_name, rc);
 			} else {
-				DEV_ERR("%pS->%s: '%s' is not available\n",
+				DEV_ERR("%pKS->%s: '%s' is not available\n",
 					__builtin_return_address(0), __func__,
 					clk_arry[i].clk_name);
 				rc = -EPERM;
@@ -406,14 +406,14 @@ int msm_dss_enable_clk(struct dss_clk *clk_arry, int num_clk, int enable)
 		}
 	} else {
 		for (i = num_clk - 1; i >= 0; i--) {
-			DEV_DBG("%pS->%s: disable '%s'\n",
+			DEV_DBG("%pKS->%s: disable '%s'\n",
 				__builtin_return_address(0), __func__,
 				clk_arry[i].clk_name);
 
 			if (clk_arry[i].clk)
 				clk_disable_unprepare(clk_arry[i].clk);
 			else
-				DEV_ERR("%pS->%s: '%s' is not available\n",
+				DEV_ERR("%pKS->%s: '%s' is not available\n",
 					__builtin_return_address(0), __func__,
 					clk_arry[i].clk_name);
 		}

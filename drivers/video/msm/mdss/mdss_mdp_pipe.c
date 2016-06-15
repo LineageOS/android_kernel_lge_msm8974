@@ -767,7 +767,7 @@ int mdss_mdp_pipe_fetch_halt(struct mdss_mdp_pipe *pipe)
 
 	is_idle = mdss_mdp_is_pipe_idle(pipe, true);
 	if (!is_idle) {
-		pr_err("%pS: pipe%d is not idle. xin_id=%d\n",
+		pr_err("%pKS: pipe%d is not idle. xin_id=%d\n",
 			__builtin_return_address(0), pipe->num, pipe->xin_id);
 
 		mdss_mdp_clk_ctrl(MDP_BLOCK_POWER_ON, false);
