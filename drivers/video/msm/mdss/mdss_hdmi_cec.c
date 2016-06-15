@@ -66,13 +66,13 @@ static void hdmi_cec_dump_msg(struct hdmi_cec_ctrl *cec_ctrl,
 	unsigned long flags;
 
 	if (!cec_ctrl || !msg) {
-		DEV_ERR("%pS->%s: invalid input\n",
+		DEV_ERR("%pKS->%s: invalid input\n",
 			__builtin_return_address(0), __func__);
 		return;
 	}
 
 	spin_lock_irqsave(&cec_ctrl->lock, flags);
-	DEV_DBG("=================%pS dump start =====================\n",
+	DEV_DBG("=================%pKS dump start =====================\n",
 		__builtin_return_address(0));
 
 	DEV_DBG("sender_id     : %d", msg->sender_id);
@@ -88,7 +88,7 @@ static void hdmi_cec_dump_msg(struct hdmi_cec_ctrl *cec_ctrl,
 	for (i = 0; i < msg->frame_size - 2; i++)
 		DEV_DBG("operand(%2d) : %02x", i + 1, msg->operand[i]);
 
-	DEV_DBG("=================%pS dump end =====================\n",
+	DEV_DBG("=================%pKS dump end =====================\n",
 		__builtin_return_address(0));
 	spin_unlock_irqrestore(&cec_ctrl->lock, flags);
 } /* hdmi_cec_dump_msg */
