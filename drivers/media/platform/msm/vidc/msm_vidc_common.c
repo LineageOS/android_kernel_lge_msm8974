@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2015, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -142,7 +142,7 @@ static int msm_comm_get_inst_load(struct msm_vidc_inst *inst,
 	if (is_non_realtime_session(inst) &&
 		(quirks & LOAD_CALC_IGNORE_NON_REALTIME_LOAD)) {
 		if (!inst->prop.fps) {
-			dprintk(VIDC_INFO, "%s: instance:%p prop->fps is set 0\n", __func__, inst);
+			dprintk(VIDC_INFO, "%s: instance:%pK prop->fps is set 0\n", __func__, inst);
 			load = 0;
 		} else
 			load = msm_comm_get_mbs_per_sec(inst) / inst->prop.fps;
@@ -981,12 +981,12 @@ void msm_comm_session_clean(struct msm_vidc_inst *inst)
 	hdev = inst->core->device;
 	mutex_lock(&inst->lock);
 	if (hdev && inst->session) {
-		dprintk(VIDC_DBG, "cleaning up instance: 0x%p\n", inst);
+		dprintk(VIDC_DBG, "cleaning up instance: 0x%pK\n", inst);
 		rc = call_hfi_op(hdev, session_clean,
 				(void *) inst->session);
 		if (rc) {
 			dprintk(VIDC_ERR,
-				"Session clean failed :%p\n", inst);
+				"Session clean failed :%pK\n", inst);
 		}
 		inst->session = NULL;
 	}
