@@ -28,7 +28,6 @@ enum {
 	Opt_fsgid,
 	Opt_gid,
 	Opt_debug,
-	Opt_lower_fs,
 	Opt_mask,
 	Opt_multiuser, // May need?
 	Opt_userid,
@@ -58,10 +57,10 @@ static int parse_options(struct super_block *sb, char *options, int silent,
 	/* by default, we use AID_MEDIA_RW as uid, gid */
 	opts->fs_low_uid = AID_MEDIA_RW;
 	opts->fs_low_gid = AID_MEDIA_RW;
-	opts->mask = 0;
+	vfsopts->mask = 0;
 	opts->multiuser = false;
 	opts->fs_user_id = 0;
-	opts->gid = 0;
+	vfsopts->gid = 0;
 	/* by default, 0MB is reserved */
 	opts->reserved_mb = 0;
 
@@ -94,7 +93,7 @@ static int parse_options(struct super_block *sb, char *options, int silent,
 		case Opt_gid:
 			if (match_int(&args[0], &option))
 				return 0;
-			opts->gid = option;
+			vfsopts->gid = option;
 			break;
 		case Opt_userid:
 			if (match_int(&args[0], &option))
@@ -104,7 +103,7 @@ static int parse_options(struct super_block *sb, char *options, int silent,
 		case Opt_mask:
 			if (match_int(&args[0], &option))
 				return 0;
-			opts->mask = option;
+			vfsopts->mask = option;
 			break;
 		case Opt_multiuser:
 			opts->multiuser = true;
@@ -193,6 +192,7 @@ static int sdcardfs_read_super(struct super_block *sb, const char *dev_name,
 
 	printk(KERN_INFO "sdcardfs: dev_name -> %s\n", dev_name);
 	printk(KERN_INFO "sdcardfs: options -> %s\n", (char *)raw_data);
+	printk(KERN_INFO "sdcardfs: mnt -> %p\n", mnt);
 
 	/* parse lower path */
 	err = kern_path(dev_name, LOOKUP_FOLLOW | LOOKUP_DIRECTORY,
@@ -284,7 +284,7 @@ static int sdcardfs_read_super(struct super_block *sb, const char *dev_name,
 		setup_derived_state(sb->s_root->d_inode, PERM_ROOT, sb_info->options.fs_user_id, AID_ROOT, false, sb->s_root->d_inode);
 		snprintf(sb_info->obbpath_s, PATH_MAX, "%s/Android/obb", dev_name);
 	}
-	fix_derived_permission(sb->s_root->d_inode);
+	fixup_tmp_permissions(sb->s_root->d_inode);
 	sb_info->sb = sb;
 	list_add(&sb_info->list, &sdcardfs_super_list);
 	mutex_unlock(&sdcardfs_super_list_lock);
