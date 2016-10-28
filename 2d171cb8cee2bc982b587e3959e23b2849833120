@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "ff2e2bb8_1d199284",
+        "filename": "drivers/mmc/host/sdhci.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 94,
+      "author": {
+        "id": 3671
+      },
+      "writtenOn": "2016-10-28T10:33:00Z",
+      "side": 1,
+      "message": "why not just ifdef out the entire contents of the function?",
+      "revId": "2d171cb8cee2bc982b587e3959e23b2849833120",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
