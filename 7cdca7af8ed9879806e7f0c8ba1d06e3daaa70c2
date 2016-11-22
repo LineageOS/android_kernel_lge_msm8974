@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "5f681702_7508e827",
+        "filename": "drivers/staging/zram/zram_drv.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 1076,
+      "author": {
+        "id": 2504
+      },
+      "writtenOn": "2016-11-22T21:15:25Z",
+      "side": 1,
+      "message": "remove this not needed line.",
+      "revId": "7cdca7af8ed9879806e7f0c8ba1d06e3daaa70c2",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
