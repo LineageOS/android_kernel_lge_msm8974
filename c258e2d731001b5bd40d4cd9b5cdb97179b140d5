@@ -45,6 +45,29 @@
       "revId": "c258e2d731001b5bd40d4cd9b5cdb97179b140d5",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5f681702_adcb2351",
+        "filename": "arch/arm/configs/cyanogenmod_d802_defconfig",
+        "patchSetId": 2
+      },
+      "lineNbr": 563,
+      "author": {
+        "id": 2504
+      },
+      "writtenOn": "2016-12-07T11:44:01Z",
+      "side": 0,
+      "message": "ITS V2",
+      "range": {
+        "startLine": 563,
+        "startChar": 0,
+        "endLine": 563,
+        "endChar": 35
+      },
+      "revId": "c258e2d731001b5bd40d4cd9b5cdb97179b140d5",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
     }
   ]
 }
