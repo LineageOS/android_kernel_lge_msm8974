@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "9a437d4f_94dd4673",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 1
+      },
+      "lineNbr": 13,
+      "author": {
+        "id": 15173
+      },
+      "writtenOn": "2017-01-29T22:13:29Z",
+      "side": 1,
+      "message": "While not necessarily *wrong* to have this in here, this is the cm-13.0-ZNH5Y required stable merge flag. Just to prevent confusion I\u0027d recommend updating the commit message to remove it.\n\nIt certainly was not part of the original CAF commit.",
+      "range": {
+        "startLine": 13,
+        "startChar": 0,
+        "endLine": 13,
+        "endChar": 6
+      },
+      "revId": "23632e436885040d1157449bf858a0e38d1f7071",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
