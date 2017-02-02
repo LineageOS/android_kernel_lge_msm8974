@@ -11312,19 +11312,16 @@ static s32 wl_notify_escan_complete(struct bcm_cfg80211 *cfg,
 	struct net_device *dev;
 
 	WL_DBG(("Enter \n"));
-
-	mutex_lock(&cfg->scan_complete);
-
 	if (!ndev) {
 		WL_ERR(("ndev is null\n"));
 		err = BCME_ERROR;
-		goto out;
+		return err;
 	}
 
 	if (cfg->escan_info.ndev != ndev) {
 		WL_ERR(("ndev is different %p %p\n", cfg->escan_info.ndev, ndev));
 		err = BCME_ERROR;
-		goto out;
+		return err;
 	}
 
 	if (cfg->scan_request) {
@@ -11369,8 +11366,6 @@ static s32 wl_notify_escan_complete(struct bcm_cfg80211 *cfg,
 	wl_clr_drv_status(cfg, SCANNING, dev);
 	spin_unlock_irqrestore(&cfg->cfgdrv_lock, flags);
 
-out:
-	mutex_unlock(&cfg->scan_complete);
 	return err;
 }
 
@@ -12098,7 +12093,6 @@ static s32 wl_init_priv(struct bcm_cfg80211 *cfg)
 	wl_init_event_handler(cfg);
 	mutex_init(&cfg->usr_sync);
 	mutex_init(&cfg->event_sync);
-	mutex_init(&cfg->scan_complete);
 	err = wl_init_scan(cfg);
 	if (err)
 		return err;
