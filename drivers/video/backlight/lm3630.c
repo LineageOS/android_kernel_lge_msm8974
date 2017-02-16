@@ -223,7 +223,7 @@ static void lm3630_set_main_current_level(struct i2c_client *client, int level)
 
 	mutex_unlock(&dev->bl_mutex);
 
-	pr_info("%s : backlight level=%d, cal_value=%d \n",
+	pr_debug("%s : backlight level=%d, cal_value=%d \n",
 				__func__, level, cal_value);
 }
 
