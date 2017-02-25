@@ -3407,6 +3407,7 @@ CONFIG_MOBICORE_API=y
 #
 # LGE Broadcast Device Support
 #
+# CONFIG_LGE_BROADCAST_ONESEG is not set
 
 #
 # LGE Japanese Mobile Broadcast(ISDB-T 1seg/ISDB-Tmm 13seg) Device Support
