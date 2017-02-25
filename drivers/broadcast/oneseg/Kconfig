@@ -25,4 +25,11 @@ config LGE_BROADCAST_ISDBT_JAPAN_FC8300
 	help
 	  Select this if you want to use Japanese FULL-SEG service
 
+config LGE_BROADCAST_ONESEG_FC8150
+	bool "1Seg broacast tuner chipset fc8150 device driver"
+	depends on LGE_BROADCAST_ONESEG && ( (MACH_APQ8064_J1KD) || (MACH_MSM8974_G2_DCM) || (MACH_MSM8974_G2_KDDI))
+	default y
+	help
+	  Select this if you want to use Japanese 1Seg mobile broadcast service
+
 endmenu
