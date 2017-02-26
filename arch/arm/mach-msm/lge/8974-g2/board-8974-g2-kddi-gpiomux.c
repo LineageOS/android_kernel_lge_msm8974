@@ -1210,7 +1210,7 @@ static struct msm_gpiomux_config msm_blsp_configs[] __initdata = {
 #endif
 
 /* LGE_CHANGE_S, [BT][younghyun.kwon@lge.com], 2013-01-29 */
-#ifndef CONFIG_LGE_BLUETOOTH
+#if !defined(CONFIG_LGE_BLUETOOTH) && (defined(CONFIG_KS8851) || defined(CONFIG_KS8851_MODULE))
 	{
 		.gpio      = 53,		/* BLSP2 QUP4 SPI_DATA_MOSI */
 		.settings = {
