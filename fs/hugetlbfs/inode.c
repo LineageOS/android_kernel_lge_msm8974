@@ -198,7 +198,7 @@ full_search:
 			return -ENOMEM;
 		}
 
-		if (!vma || addr + len <= vma->vm_start) {
+		if (!vma || addr + len <= vm_start_gap(vma)) {
 			mm->free_area_cache = addr + len;
 			return addr;
 		}
