@@ -1,0 +1,50 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "5a8e3278_6c3450d4",
+        "filename": "drivers/video/fbcmap.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 173,
+      "author": {
+        "id": 14088
+      },
+      "writtenOn": "2017-07-16T14:55:55Z",
+      "side": 1,
+      "message": "maybe you should revisit",
+      "range": {
+        "startLine": 172,
+        "startChar": 0,
+        "endLine": 173,
+        "endChar": 17
+      },
+      "revId": "4b17261e6974b4a431740fb1bbfb7b4403d9ba6c",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9e1fe85a_0b38e53a",
+        "filename": "drivers/video/fbcmap.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 207,
+      "author": {
+        "id": 14088
+      },
+      "writtenOn": "2017-07-16T14:55:55Z",
+      "side": 1,
+      "message": "same",
+      "range": {
+        "startLine": 203,
+        "startChar": 0,
+        "endLine": 207,
+        "endChar": 17
+      },
+      "revId": "4b17261e6974b4a431740fb1bbfb7b4403d9ba6c",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
