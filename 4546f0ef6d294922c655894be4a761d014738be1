@@ -1,0 +1,38 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "be94c2df_6534750d",
+        "filename": "drivers/staging/prima/CORE/HDD/src/wlan_hdd_wext.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 2049,
+      "author": {
+        "id": 17323
+      },
+      "writtenOn": "2017-07-27T16:09:01Z",
+      "side": 1,
+      "message": "Fix indentation here please\nWeird mix of spaces and tabs. Use spaces everywhere. Fix braces",
+      "revId": "4546f0ef6d294922c655894be4a761d014738be1",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "a6f0a023_48e3eb8d",
+        "filename": "drivers/staging/prima/CORE/HDD/src/wlan_hdd_wext.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 2082,
+      "author": {
+        "id": 17323
+      },
+      "writtenOn": "2017-07-27T16:09:01Z",
+      "side": 1,
+      "message": "Same here",
+      "revId": "4546f0ef6d294922c655894be4a761d014738be1",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
