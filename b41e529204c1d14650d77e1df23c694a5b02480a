@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "d81193a5_a45f6227",
+        "filename": "drivers/staging/prima/CORE/HDD/src/wlan_hdd_wext.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 7118
+      },
+      "writtenOn": "2017-07-28T12:07:11Z",
+      "side": 1,
+      "message": "Where did these changes come from? They don\u0027t belong in this CL.",
+      "revId": "b41e529204c1d14650d77e1df23c694a5b02480a",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
