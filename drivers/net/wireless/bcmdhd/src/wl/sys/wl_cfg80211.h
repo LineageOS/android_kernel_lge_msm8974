@@ -1,7 +1,7 @@
 /*
  * Linux cfg80211 driver
  *
- * Copyright (C) 1999-2014, Broadcom Corporation
+ * Copyright (C) 1999-2015, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: wl_cfg80211.h 503322 2014-09-18 07:29:37Z $
+ * $Id: wl_cfg80211.h 522024 2014-12-19 11:13:37Z $
  */
 
 /**
@@ -536,7 +536,6 @@ struct bcm_cfg80211 {
 	struct completion iface_disable;
 	struct completion wait_next_af;
 	struct mutex usr_sync;	/* maily for up/down synchronization */
-	struct mutex scan_complete;	/* serialize scan_complete call */
 	struct wl_scan_results *bss_list;
 	struct wl_scan_results *scan_results;
 
@@ -608,7 +607,7 @@ struct bcm_cfg80211 {
 	u8 block_gon_req_tx_count;
 	u8 block_gon_req_rx_count;
 #endif /* WL_CFG80211_GON_COLLISION */
-#if defined(CUSTOMER_HW10)	// [CSP#868459] TV connection issue
+#if defined(P2P_IE_MISSING_FIX)
 	bool p2p_prb_noti;
 #endif
 	s32(*state_notifier) (struct bcm_cfg80211 *cfg,

@@ -58,6 +58,14 @@ config BCM4343
 	  This module adds support for wireless adapters based on
 	  Broadcom 4343 chipset.
 
+config BCM43455
+	tristate "Broadcom 43455 wireless cards support"
+	depends on BCMDHD
+	default n
+	---help---
+	  This module adds support for wireless adapters based on
+	  Broadcom 43455 chipset.
+
 config BCM4354
 	bool "Broadcom 4354 wireless cards support"
 	depends on BCMDHD && (BCMDHD_SDIO || BCMDHD_PCIE)
@@ -72,6 +80,13 @@ config BCM4356
 	  This module adds support for wireless adapters based on
 	  Broadcom 4356 chipset.
 
+config BCM4358
+	bool "Broadcom 4358 wireless cards support"
+	depends on BCMDHD && BCMDHD_PCIE
+	---help---
+	  This module adds support for wireless adapters based on
+	  Broadcom 4358 chipset.
+	  
 config BCMDHD_COB
 	bool "Enables COB type support"
 	depends on BCMDHD
@@ -175,3 +190,10 @@ config BRCM_WAPI
         default n
         ---help---
           Enables WAPI support
+
+config BCMDHD_HOSTAPD_BGN_MODE
+	bool "Enables BGN mode support in HOSTAPD"
+	depends on BCMDHD
+	default n
+	---help---
+	  This is a configuration for support B/BG/BGN mode in HOSTAPD

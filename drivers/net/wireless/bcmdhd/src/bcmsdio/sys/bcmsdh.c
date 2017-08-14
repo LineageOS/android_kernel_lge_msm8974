@@ -2,7 +2,7 @@
  *  BCMSDH interface glue
  *  implement bcmsdh API for SDIOH driver
  *
- * Copyright (C) 1999-2014, Broadcom Corporation
+ * Copyright (C) 1999-2015, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -405,7 +405,7 @@ bcmsdh_reg_read(void *sdh, uint32 addr, uint size)
 	SDIOH_API_RC status;
 	uint32 word = 0;
 
-	BCMSDH_INFO(("%s:fun = 1, addr = 0x%x,\n", __FUNCTION__, addr));
+	BCMSDH_INFO(("%s:fun = 1, addr = 0x%x, ", __FUNCTION__, addr));
 
 	if (!bcmsdh)
 		bcmsdh = l_bcmsdh;

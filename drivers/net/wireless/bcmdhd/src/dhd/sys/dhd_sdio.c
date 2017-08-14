@@ -1,7 +1,7 @@
 /*
  * DHD Bus Module for SDIO
  *
- * Copyright (C) 1999-2014, Broadcom Corporation
+ * Copyright (C) 1999-2015, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: dhd_sdio.c 504212 2014-09-23 08:21:02Z $
+ * $Id: dhd_sdio.c 543294 2015-03-24 06:10:31Z $
  */
 
 #include <typedefs.h>
@@ -607,6 +607,7 @@ static int dhdsdio_checkdied(dhd_bus_t *bus, char *data, uint size);
 static int dhd_serialconsole(dhd_bus_t *bus, bool get, bool enable, int *bcmerror);
 #endif /* DHD_DEBUG */
 
+static int dhdsdio_mem_dump(dhd_bus_t *bus);
 static int dhdsdio_devcap_set(dhd_bus_t *bus, uint8 cap);
 static int dhdsdio_download_state(dhd_bus_t *bus, bool enter);
 
@@ -3209,6 +3210,12 @@ printbuf:
 		DHD_ERROR(("%s: %s\n", __FUNCTION__, strbuf.origbuf));
 	}
 
+	if (sdpcm_shared.flags & SDPCM_SHARED_TRAP) {
+		/* Mem dump to a file on device */
+		dhdsdio_mem_dump(bus);
+		/* In some cases, the host back trace could be relevant too. */
+		WARN_ON(1);
+	}
 
 done:
 	if (mbuffer)
@@ -3220,8 +3227,60 @@ done:
 
 	return bcmerror;
 }
-#endif /* #ifdef DHD_DEBUG */
 
+
+static int
+dhdsdio_mem_dump(dhd_bus_t *bus)
+{
+	int ret = 0;
+	int size; /* Full mem size */
+	int start = bus->dongle_ram_base; /* Start address */
+	int read_size = 0; /* Read size of each iteration */
+	uint8 *buf = NULL, *databuf = NULL;
+
+	/* Get full mem size */
+	size = bus->ramsize;
+	buf = MALLOC(bus->dhd->osh, size);
+	if (!buf) {
+		DHD_ERROR(("%s: Out of memory (%d bytes)\n", __FUNCTION__, size));
+		return -1;
+	}
+
+	/* Read mem content */
+	DHD_ERROR(("Dump dongle memory\n"));
+	databuf = buf;
+	while (size)
+	{
+		read_size = MIN(MEMBLOCK, size);
+		if ((ret = dhdsdio_membytes(bus, FALSE, start, databuf, read_size)))
+		{
+			DHD_ERROR(("%s: Error membytes %d\n", __FUNCTION__, ret));
+			if (buf) {
+				MFREE(bus->dhd->osh, buf, size);
+			}
+			return -1;
+		}
+		/* Decrement size and increment start address */
+		size -= read_size;
+		start += read_size;
+		databuf += read_size;
+	}
+	DHD_ERROR(("Done\n"));
+
+	dhd_save_fwdump(bus->dhd, buf, bus->ramsize);
+	dhd_schedule_memdump(bus->dhd, buf, bus->ramsize);
+	/* buf free handled in write_to_file, not here */
+
+	return 0;
+}
+
+int
+dhd_bus_mem_dump(dhd_pub_t *dhdp)
+{
+	dhd_bus_t *bus = dhdp->bus;
+	return dhdsdio_mem_dump(bus);
+}
+#endif /* #ifdef DHD_DEBUG */
 
 int
 dhdsdio_downloadvars(dhd_bus_t *bus, void *arg, int len)
@@ -6265,12 +6324,8 @@ clkwait:
 		txlimit -= framecnt;
 	}
 	/* Resched the DPC if ctrl cmd is pending on bus credit */
-	if (bus->ctrl_frame_stat) {
-#ifdef CUSTOMER_HW10
-		OSL_SLEEP(50);
-#endif
+	if (bus->ctrl_frame_stat)
 		resched = TRUE;
-	}
 
 	/* Resched if events or tx frames are pending, else await next interrupt */
 	/* On failed register access, all bets are off: no resched or interrupts */
@@ -7703,7 +7758,8 @@ dhdsdio_probe_attach(struct dhd_bus *bus, osl_t *osh, void *sdh, void *regsva,
 				bus->dongle_ram_base = CR4_4360_RAM_BASE;
 				break;
 			case BCM4345_CHIP_ID:
-				bus->dongle_ram_base = CR4_4345_RAM_BASE;
+				bus->dongle_ram_base = (bus->sih->chiprev < 6)  /* from 4345C0 */
+					? CR4_4345_LT_C0_RAM_BASE : CR4_4345_GE_C0_RAM_BASE;
 				break;
 			case BCM4349_CHIP_GRPID:
 				bus->dongle_ram_base = CR4_4349_RAM_BASE;
@@ -8108,7 +8164,7 @@ dhdsdio_suspend(void *context)
 	}
 
 	ret = dhd_os_check_wakelock(bus->dhd);
-	if (ret && (bus->dhd->up)) {
+	if ((ret) && (bus->dhd->up)) {
 		if (wait_event_timeout(bus->bus_sleep, bus->sleeping, wait_time) == 0) {
 			if (!bus->sleeping) {
 				return 1;
