@@ -1,7 +1,7 @@
 /*
  * DHD PROP_TXSTATUS Module.
  *
- * Copyright (C) 1999-2014, Broadcom Corporation
+ * Copyright (C) 1999-2015, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: dhd_wlfc.c 501046 2014-09-06 01:25:16Z $
+ * $Id: dhd_wlfc.c 522006 2014-12-19 08:44:54Z $
  *
  */
 
@@ -170,19 +170,20 @@ static void*
 _dhd_wlfc_hanger_create(dhd_pub_t *dhd, int max_items)
 #else
 _dhd_wlfc_hanger_create(osl_t *osh, int max_items)
-#endif
+#endif /* defined(CUSTOMER_HW10) */
 {
 	int i;
 	wlfc_hanger_t* hanger;
 #if defined(CUSTOMER_HW10)
 	osl_t *osh = dhd->osh;
-#endif
+#endif /* defined(CUSTOMER_HW10) */
 	/* allow only up to a specific size for now */
 	ASSERT(max_items == WLFC_HANGER_MAXITEMS);
 
 #if defined(CUSTOMER_HW10)
-	if ((hanger = (wlfc_hanger_t*)DHD_OS_PREALLOC(dhd, DHD_PREALLOC_DHD_WLFC_HANGER, WLFC_HANGER_SIZE(max_items))) == NULL)
-#endif
+	if ((hanger = (wlfc_hanger_t*)DHD_OS_PREALLOC(dhd, DHD_PREALLOC_DHD_WLFC_HANGER,
+		WLFC_HANGER_SIZE(max_items))) == NULL)
+#endif /* defined(CUSTOMER_HW10) */
 	if ((hanger = (wlfc_hanger_t*)MALLOC(osh, WLFC_HANGER_SIZE(max_items))) == NULL)
 		return NULL;
 
@@ -200,19 +201,19 @@ static int
 _dhd_wlfc_hanger_delete(dhd_pub_t *dhd, void* hanger)
 #else
 _dhd_wlfc_hanger_delete(osl_t *osh, void* hanger)
-#endif
+#endif /* defined(CUSTOMER_HW10) */
 {
 	wlfc_hanger_t* h = (wlfc_hanger_t*)hanger;
 #if defined(CUSTOMER_HW10)
 	osl_t *osh = dhd->osh;
-#endif
+#endif /* defined(CUSTOMER_HW10) */
 
 	if (h) {
 #if defined(CUSTOMER_HW10)
-		if (h != (wlfc_hanger_t *)dhd_os_prealloc(dhd, DHD_PREALLOC_DHD_WLFC_HANGER, 0, FALSE))
-#endif
+		if (h != (wlfc_hanger_t *)dhd_os_prealloc(dhd, DHD_PREALLOC_DHD_WLFC_HANGER,
+			0, FALSE))
+#endif /* defined(CUSTOMER_HW10) */
 		MFREE(osh, h, WLFC_HANGER_SIZE(h->max_items));
-
 		return BCME_OK;
 	}
 	return BCME_BADARG;
@@ -2570,7 +2571,7 @@ int dhd_wlfc_enable(dhd_pub_t *dhd)
 		wlfc->hanger = _dhd_wlfc_hanger_create(dhd, WLFC_HANGER_MAXITEMS);
 #else
 		wlfc->hanger = _dhd_wlfc_hanger_create(dhd->osh, WLFC_HANGER_MAXITEMS);
-#endif
+#endif /* defined(CUSTOMER_HW10) */
 		if (wlfc->hanger == NULL) {
 			DHD_OS_PREFREE(dhd, dhd->wlfc_state,
 				sizeof(athost_wl_status_info_t));
@@ -3401,7 +3402,7 @@ dhd_wlfc_deinit(dhd_pub_t *dhd)
 		_dhd_wlfc_hanger_delete(dhd, wlfc->hanger);
 #else
 		_dhd_wlfc_hanger_delete(dhd->osh, wlfc->hanger);
-#endif
+#endif /* defined(CUSTOMER_HW10) */
 	}
 
 

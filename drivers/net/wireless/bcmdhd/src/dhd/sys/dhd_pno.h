@@ -1,7 +1,7 @@
 /*
  * Header file of Broadcom Dongle Host Driver (DHD)
  * Prefered Network Offload code and Wi-Fi Location Service(WLS) code.
- * Copyright (C) 1999-2014, Broadcom Corporation
+ * Copyright (C) 1999-2015, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -450,6 +450,10 @@ extern void dhd_dev_gscan_hotlist_cache_cleanup(struct net_device *dev, hotlist_
 extern void dhd_dev_wait_batch_results_complete(struct net_device *dev);
 extern void dhd_dev_end_one_shot_gscan(struct net_device *dev);
 #endif /* GSCAN_SUPPORT */
+#ifdef LPS_SUPPORT
+extern int
+dhd_dev_pno_stop_for_hotlist(struct net_device *dev);
+#endif	/* LPS_SUPPORT */
 /* dhd pno fuctions */
 extern int dhd_pno_stop_for_ssid(dhd_pub_t *dhd);
 extern int dhd_pno_enable(dhd_pub_t *dhd, int enable);

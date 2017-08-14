@@ -1,7 +1,7 @@
 /*
  * Linux cfg80211 driver
  *
- * Copyright (C) 1999-2014, Broadcom Corporation
+ * Copyright (C) 1999-2015, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: wl_cfg80211.c 515148 2014-11-13 09:19:14Z $
+ * $Id: wl_cfg80211.c 531056 2015-02-02 07:34:08Z $
  */
 /* */
 #include <typedefs.h>
@@ -491,6 +491,13 @@ static s32 wl_tdls_event_handler(struct bcm_cfg80211 *cfg, bcm_struct_cfgdev *cf
 static void wl_tdls_enable(struct bcm_cfg80211 *cfg);
 #endif
 #endif /* WLTDLS */
+
+#ifdef LPS_SUPPORT
+#define LPS_BSSID_NET_FOUND	0x1000
+#define LPS_BSSID_NET_LOST	0x1001
+static s32 wl_lps_event_handler(struct bcm_cfg80211 *cfg, bcm_struct_cfgdev *cfgdev,
+	const wl_event_msg_t *e, void *data);
+#endif /* LPS_SUPPORT */
 /*
  * register/deregister parent device
  */
@@ -2104,6 +2111,7 @@ static s32 wl_cfg80211_handle_ifdel(struct bcm_cfg80211 *cfg, wl_if_event_info *
 #if defined(CUSTOMER_HW10) && defined(WLTDLS)
 		wl_tdls_enable(cfg);
 #endif
+
 #ifdef PROP_TXSTATUS_VSDB
 #if defined(BCMSDIO)
 		dhd_wlfc_get_enable(dhd, &enabled);
@@ -2265,18 +2273,15 @@ static void wl_scan_prep(struct wl_scan_params *params, struct cfg80211_scan_req
 		WL_SCAN(("Scanning all channels\n"));
 	}
 	n_channels = j;
-
 	/* Copy ssid array if applicable */
 	WL_SCAN(("### List of SSIDs to scan ###\n"));
 	if (n_ssids > 0) {
 		offset = offsetof(wl_scan_params_t, channel_list) + n_channels * sizeof(u16);
 		offset = roundup(offset, sizeof(u32));
 		ptr = (char*)params + offset;
-
 		for (i = 0; i < n_ssids; i++) {
 			memset(&ssid, 0, sizeof(wlc_ssid_t));
-			ssid.SSID_len = MIN(request->ssids[i].ssid_len,
-					    DOT11_MAX_SSID_LEN);
+			ssid.SSID_len = request->ssids[i].ssid_len;
 			memcpy(ssid.SSID, request->ssids[i].ssid, ssid.SSID_len);
 			if (!ssid.SSID_len)
 				WL_SCAN(("%d: Broadcast scan\n", i));
@@ -2707,7 +2712,7 @@ __wl_cfg80211_scan(struct wiphy *wiphy, struct net_device *ndev,
 					get_primary_mac(cfg, &primary_mac);
 					wl_cfgp2p_generate_bss_mac(&primary_mac,
 						&cfg->p2p->dev_addr, &cfg->p2p->int_addr);
-#if defined(CUSTOMER_HW10)	// [CSP#868459] TV connection issue
+#if defined(P2P_IE_MISSING_FIX)
 					cfg->p2p_prb_noti = false;
 #endif
 				}
@@ -5797,6 +5802,7 @@ static s32
 wl_cfg80211_cancel_remain_on_channel(struct wiphy *wiphy,
 	bcm_struct_cfgdev *cfgdev, u64 cookie)
 {
+	struct bcm_cfg80211 *cfg = wiphy_priv(wiphy);
 	s32 err = 0;
 
 #ifdef P2PLISTEN_AP_SAMECHN
@@ -5820,6 +5826,15 @@ wl_cfg80211_cancel_remain_on_channel(struct wiphy *wiphy,
 		WL_DBG(("p2p_resp_apchn_status Turn OFF \n"));
 	}
 #endif /* P2PLISTEN_AP_SAMECHN */
+
+	if (cfg->last_roc_id == cookie) {
+		wl_cfgp2p_set_p2p_mode(cfg, WL_P2P_DISC_ST_SCAN, 0, 0,
+			wl_to_p2p_bss_bssidx(cfg, P2PAPI_BSSCFG_DEVICE));
+	} else {
+		WL_ERR(("%s : ignore, request cookie(%llu) is not matched. (cur : %llu)\n",
+			__FUNCTION__, cookie, cfg->last_roc_id));
+	}
+
 	return err;
 }
 
@@ -6500,10 +6515,11 @@ wl_cfg80211_mgmt_tx(struct wiphy *wiphy, bcm_struct_cfgdev *cfgdev,
 				wl_cfgp2p_set_management_ie(cfg, dev, bssidx,
 				VNDR_IE_PRBRSP_FLAG, (u8 *)(buf + ie_offset), ie_len);
 			cfg80211_mgmt_tx_status(cfgdev, *cookie, buf, len, true, GFP_KERNEL);
-#if defined(CUSTOMER_HW10)	// [CSP#868459] TV connection issue
-			if(!cfg->p2p_prb_noti) {
+#if defined(P2P_IE_MISSING_FIX)
+			if (!cfg->p2p_prb_noti) {
 				cfg->p2p_prb_noti = true;
-				WL_DBG(("%s: TX 802_1X Probe Response first time.\n", __FUNCTION__));
+				WL_DBG(("%s: TX 802_1X Probe Response first time.\n",
+					__FUNCTION__));
 			}
 #endif
 			goto exit;
@@ -7591,16 +7607,16 @@ static s32 wl_cfg80211_bcn_set_params(
 	}
 
 	if ((info->ssid) && (info->ssid_len > 0) &&
-		(info->ssid_len <= DOT11_MAX_SSID_LEN)) {
+		(info->ssid_len <= 32)) {
 		WL_DBG(("SSID (%s) len:%zd \n", info->ssid, info->ssid_len));
 		if (dev_role == NL80211_IFTYPE_AP) {
 			/* Store the hostapd SSID */
-			memset(cfg->hostapd_ssid.SSID, 0x00, DOT11_MAX_SSID_LEN);
+			memset(cfg->hostapd_ssid.SSID, 0x00, 32);
 			memcpy(cfg->hostapd_ssid.SSID, info->ssid, info->ssid_len);
 			cfg->hostapd_ssid.SSID_len = info->ssid_len;
 		} else {
 				/* P2P GO */
-			memset(cfg->p2p->ssid.SSID, 0x00, DOT11_MAX_SSID_LEN);
+			memset(cfg->p2p->ssid.SSID, 0x00, 32);
 			memcpy(cfg->p2p->ssid.SSID, info->ssid, info->ssid_len);
 			cfg->p2p->ssid.SSID_len = info->ssid_len;
 		}
@@ -7730,13 +7746,11 @@ wl_cfg80211_bcn_bringup_ap(
 		}
 
 		memset(&join_params, 0, sizeof(join_params));
-
 		/* join parameters starts with ssid */
 		join_params_size = sizeof(join_params.ssid);
-		join_params.ssid.SSID_len = MIN(cfg->hostapd_ssid.SSID_len,
-						(uint32)DOT11_MAX_SSID_LEN);
-		memcpy(join_params.ssid.SSID, cfg->hostapd_ssid.SSID, join_params.ssid.SSID_len);
-		join_params.ssid.SSID_len = htod32(join_params.ssid.SSID_len);
+		memcpy(join_params.ssid.SSID, cfg->hostapd_ssid.SSID,
+			cfg->hostapd_ssid.SSID_len);
+		join_params.ssid.SSID_len = htod32(cfg->hostapd_ssid.SSID_len);
 
 		/* create softap */
 		if ((err = wldev_ioctl(dev, WLC_SET_SSID, &join_params,
@@ -8090,17 +8104,16 @@ wl_cfg80211_start_ap(
 	if (dev == bcmcfg_to_prmry_ndev(cfg)) {
 		WL_DBG(("Start AP req on primary iface: Softap\n"));
 		dev_role = NL80211_IFTYPE_AP;
-#ifdef CUSTOMER_HW10  // htcheck : softAP crash issue
-               if (!cfg->ap_info) {
-                   if ((cfg->ap_info = kzalloc(sizeof(struct ap_info), GFP_KERNEL))) {
-                        //WL_ERR(("%s: struct ap_info re-allocated\n", __FUNCTION__));
-                    } else {
-                        WL_ERR(("%s: struct ap_info re-allocation failed\n", __FUNCTION__));
-                        err = -ENOMEM;
-                        goto fail;
-                    }
-                }
-#endif
+		if (!cfg->ap_info) {
+			if ((cfg->ap_info = kzalloc(sizeof(struct ap_info), GFP_KERNEL))) {
+					WL_ERR(("%s: struct ap_info re-allocated\n", __FUNCTION__));
+			} else {
+					WL_ERR(("%s: struct ap_info re-allocation failed\n",
+						__FUNCTION__));
+					err = -ENOMEM;
+					goto fail;
+			}
+		}
 	}
 #if defined(WL_ENABLE_P2P_IF)
 	else if (dev == cfg->p2p_net) {
@@ -8400,24 +8413,20 @@ wl_cfg80211_add_set_beacon(struct wiphy *wiphy, struct net_device *dev,
 	}
 
 	ie_offset = DOT11_MGMT_HDR_LEN + DOT11_BCN_PRB_FIXED_LEN;
-
 	/* find the SSID */
 	if ((ssid_ie = bcm_parse_tlvs((u8 *)&info->head[ie_offset],
 		info->head_len - ie_offset,
 		DOT11_MNG_SSID_ID)) != NULL) {
 		if (dev_role == NL80211_IFTYPE_AP) {
 			/* Store the hostapd SSID */
-			memset(&cfg->hostapd_ssid.SSID[0], 0x00, DOT11_MAX_SSID_LEN);
-			cfg->hostapd_ssid.SSID_len = MIN(ssid_ie->len,
-							DOT11_MAX_SSID_LEN);
-			memcpy(&cfg->hostapd_ssid.SSID[0], ssid_ie->data,
-				cfg->hostapd_ssid.SSID_len);
+			memset(&cfg->hostapd_ssid.SSID[0], 0x00, 32);
+			memcpy(&cfg->hostapd_ssid.SSID[0], ssid_ie->data, ssid_ie->len);
+			cfg->hostapd_ssid.SSID_len = ssid_ie->len;
 		} else {
-			/* P2P GO */
-			memset(&cfg->p2p->ssid.SSID[0], 0x00, DOT11_MAX_SSID_LEN);
-			cfg->p2p->ssid.SSID_len = MIN(ssid_ie->len,
-						     DOT11_MAX_SSID_LEN);
-			memcpy(cfg->p2p->ssid.SSID, ssid_ie->data, cfg->p2p->ssid.SSID_len);
+				/* P2P GO */
+			memset(&cfg->p2p->ssid.SSID[0], 0x00, 32);
+			memcpy(cfg->p2p->ssid.SSID, ssid_ie->data, ssid_ie->len);
+			cfg->p2p->ssid.SSID_len = ssid_ie->len;
 		}
 	}
 
@@ -8506,9 +8515,10 @@ fail:
 #endif /* LINUX_VERSION < VERSION(3,4,0) || WL_COMPAT_WIRELESS */
 
 #ifdef WL_SCHED_SCAN
-#define PNO_TIME		120 // 30
-#define PNO_REPEAT		2 // 4
-#define PNO_FREQ_EXPO_MAX	3 // 2
+//LGE_Patch
+#define PNO_TIME		300 //120 // 30
+#define PNO_REPEAT		1 //2 // 4
+#define PNO_FREQ_EXPO_MAX	3 //3 // 2
 static bool
 is_ssid_in_list(struct cfg80211_ssid *ssid, struct cfg80211_ssid *ssid_list, int count)
 {
@@ -8564,11 +8574,8 @@ wl_cfg80211_sched_scan_start(struct wiphy *wiphy,
 		ssid = &request->match_sets[i].ssid;
 		/* No need to include null ssid */
 		if (ssid->ssid_len) {
-			ssids_local[ssid_cnt].SSID_len = MIN(ssid->ssid_len,
-				(uint8)DOT11_MAX_SSID_LEN);
-			memcpy(ssids_local[ssid_cnt].SSID, ssid->ssid,
-				ssids_local[ssid_cnt].SSID_len);
-
+			memcpy(ssids_local[ssid_cnt].SSID, ssid->ssid, ssid->ssid_len);
+			ssids_local[ssid_cnt].SSID_len = ssid->ssid_len;
 			if (is_ssid_in_list(ssid, hidden_ssid_list, request->n_ssids)) {
 				ssids_local[ssid_cnt].hidden = TRUE;
 				WL_PNO((">>> PNO hidden SSID (%s) \n", ssid->ssid));
@@ -10781,7 +10788,7 @@ wl_notify_rx_mgmt_frame(struct bcm_cfg80211 *cfg, bcm_struct_cfgdev *cfgdev,
 			 * GO-NEG Phase
 			 */
 			if (cfg->p2p &&
-#if defined(CUSTOMER_HW10)	// [CSP#868459] TV connection issue
+#if defined(P2P_IE_MISSING_FIX)
 				cfg->p2p_prb_noti &&
 #endif
 				wl_get_p2p_status(cfg, GO_NEG_PHASE)) {
@@ -11009,6 +11016,10 @@ static void wl_init_event_handler(struct bcm_cfg80211 *cfg)
 	cfg->evt_handler[WLC_E_NAN] = wl_cfgnan_notify_nan_status;
 	cfg->evt_handler[WLC_E_PROXD] = wl_cfgnan_notify_proxd_status;
 #endif /* WL_NAN */
+#ifdef LPS_SUPPORT
+	cfg->evt_handler[WLC_E_PFN_BSSID_NET_FOUND] = wl_lps_event_handler;
+	cfg->evt_handler[WLC_E_PFN_BSSID_NET_LOST] = wl_lps_event_handler;
+#endif	/* LPS_SUPPORT */
 	cfg->evt_handler[WLC_E_RMC_EVENT] = wl_notify_rmc_status;
 }
 
@@ -11247,7 +11258,7 @@ wl_cfg80211_netdev_notifier_call(struct notifier_block * nb,
 					break;
 				}
 				set_current_state(TASK_INTERRUPTIBLE);
-				(void)schedule_timeout(HZ);
+				(void)schedule_timeout(100);
 				set_current_state(TASK_RUNNING);
 				refcnt++;
 			}
@@ -11316,19 +11327,16 @@ static s32 wl_notify_escan_complete(struct bcm_cfg80211 *cfg,
 	struct net_device *dev;
 
 	WL_DBG(("Enter \n"));
-
-	mutex_lock(&cfg->scan_complete);
-
 	if (!ndev) {
 		WL_ERR(("ndev is null\n"));
 		err = BCME_ERROR;
-		goto out;
+		return err;
 	}
 
 	if (cfg->escan_info.ndev != ndev) {
 		WL_ERR(("ndev is different %p %p\n", cfg->escan_info.ndev, ndev));
 		err = BCME_ERROR;
-		goto out;
+		return err;
 	}
 
 	if (cfg->scan_request) {
@@ -11373,8 +11381,6 @@ static s32 wl_notify_escan_complete(struct bcm_cfg80211 *cfg,
 	wl_clr_drv_status(cfg, SCANNING, dev);
 	spin_unlock_irqrestore(&cfg->cfgdrv_lock, flags);
 
-out:
-	mutex_unlock(&cfg->scan_complete);
 	return err;
 }
 
@@ -11567,7 +11573,8 @@ static s32 wl_escan_handler(struct bcm_cfg80211 *cfg, bcm_struct_cfgdev *cfgdev,
 			}
 #ifdef CUSTOMER_HW10
 			if (!bi->RSSI) {
-				WL_SCAN(("%s("MACDBG"), bss: RSSI %d\n", bi->SSID, MAC2STRDBG(bi->BSSID.octet),bi->RSSI));
+				WL_SCAN(("%s("MACDBG"), bss: RSSI %d\n", bi->SSID,
+				MAC2STRDBG(bi->BSSID.octet), bi->RSSI));
 				goto exit;
 			}
 #endif
@@ -11987,7 +11994,7 @@ static s32 wl_notifier_change_state(struct bcm_cfg80211 *cfg, struct net_info *_
 			err = wldev_iovar_setint(primary_dev, "tdls_enable", 0);
 		}
 #endif /* defined(WLTDLS) */
-#endif
+#endif /* !defined(CUSTOMER_HW10) */
 
 #if defined(CUSTOMER_HW4) && defined(DISABLE_FRAMEBURST_VSDB)
 #if defined(USE_WFA_CERT_CONF)
@@ -12034,7 +12041,7 @@ static s32 wl_notifier_change_state(struct bcm_cfg80211 *cfg, struct net_info *_
 			err = wldev_iovar_setint(primary_dev, "tdls_enable", 1);
 		}
 #endif /* defined(WLTDLS) */
-#endif
+#endif /* !defined(CUSTOMER_HW10) */
 
 #if defined(CUSTOMER_HW4) && defined(DISABLE_FRAMEBURST_VSDB)
 #if defined(USE_WFA_CERT_CONF)
@@ -12102,7 +12109,6 @@ static s32 wl_init_priv(struct bcm_cfg80211 *cfg)
 	wl_init_event_handler(cfg);
 	mutex_init(&cfg->usr_sync);
 	mutex_init(&cfg->event_sync);
-	mutex_init(&cfg->scan_complete);
 	err = wl_init_scan(cfg);
 	if (err)
 		return err;
@@ -13300,13 +13306,28 @@ int wl_cfg80211_hang(struct net_device *dev, u16 reason)
 	if (cfg != NULL) {
 		wl_link_down(cfg);
 	}
+	return 0;
+}
 
-	dev->netdev_ops->ndo_stop(dev);
-	msleep(1000);
-	dev->netdev_ops->ndo_open(dev);
+#ifdef LPS_SUPPORT
+int wl_cfg80211_lps(struct net_device *dev, u32 reason)
+{
+	u16 msg = 0;
+
+	switch (reason) {
+	case WLC_E_PFN_BSSID_NET_FOUND:
+		msg = LPS_BSSID_NET_FOUND;
+		break;
+	case WLC_E_PFN_BSSID_NET_LOST:
+		msg = LPS_BSSID_NET_LOST;
+		break;
+	}
+	WL_ERR(("%s: LPS Event occurred (0x%X)\n", __FUNCTION__, msg));
+	cfg80211_disconnected(dev, msg, NULL, 0, GFP_KERNEL);
 
 	return 0;
 }
+#endif	/* LPS_SUPPORT */
 
 s32 wl_cfg80211_down(void *para)
 {
@@ -13370,10 +13391,10 @@ wl_update_prof(struct bcm_cfg80211 *cfg, struct net_device *ndev,
 	switch (item) {
 	case WL_PROF_SSID:
 		ssid = (wlc_ssid_t *) data;
-		memset(profile->ssid.SSID, 0, sizeof(profile->ssid.SSID));
-		profile->ssid.SSID_len = MIN(ssid->SSID_len,
-					     DOT11_MAX_SSID_LEN);
-		memcpy(profile->ssid.SSID, ssid->SSID, profile->ssid.SSID_len);
+		memset(profile->ssid.SSID, 0,
+			sizeof(profile->ssid.SSID));
+		memcpy(profile->ssid.SSID, ssid->SSID, ssid->SSID_len);
+		profile->ssid.SSID_len = ssid->SSID_len;
 		break;
 	case WL_PROF_BSSID:
 		if (data)
@@ -13456,44 +13477,27 @@ static __used s32 wl_add_ie(struct bcm_cfg80211 *cfg, u8 t, u8 l, u8 *v)
 static void wl_update_hidden_ap_ie(struct wl_bss_info *bi, u8 *ie_stream, u32 *ie_size, bool roam)
 {
 	u8 *ssidie;
-	int32 ssid_len = MIN(bi->SSID_len, DOT11_MAX_SSID_LEN);
-	int32 remaining_ie_buf_len, available_buffer_len;
 	ssidie = (u8 *)cfg80211_find_ie(WLAN_EID_SSID, ie_stream, *ie_size);
-
-	/*
-	 * ERROR out if
-	 * 1. No ssid IE is FOUND or
-	 * 2. New ssid length is > what was allocated for existing ssid (as
-	 *    we do not want to overwrite the rest of the IEs) or
-	 * 3. If in case of erroneous buffer input where ssid length doesnt match the space
-	 *    allocated to it.
-	 */
 	if (!ssidie)
 		return;
-
-	available_buffer_len = ((int)(*ie_size)) - (ssidie + 2 - ie_stream);
-	remaining_ie_buf_len = available_buffer_len - (int)ssidie[1];
-	if ((ssid_len > ssidie[1]) || (ssidie[1] > available_buffer_len))
-		return;
-
-	if (ssidie[1] != ssid_len) {
+	if (ssidie[1] != bi->SSID_len) {
 		if (ssidie[1]) {
 			WL_ERR(("%s: Wrong SSID len: %d != %d\n",
 				__FUNCTION__, ssidie[1], bi->SSID_len));
 		}
 		if (roam) {
 			WL_ERR(("Changing the SSID Info.\n"));
-			memmove(ssidie + ssid_len + 2,
-				(ssidie + 2) + ssidie[1], remaining_ie_buf_len);
-			memcpy(ssidie + 2, bi->SSID, ssid_len);
-			*ie_size = *ie_size + ssid_len - ssidie[1];
-			ssidie[1] = ssid_len;
+			memmove(ssidie + bi->SSID_len + 2,
+				(ssidie + 2) + ssidie[1],
+				*ie_size - (ssidie + 2 + ssidie[1] - ie_stream));
+			memcpy(ssidie + 2, bi->SSID, bi->SSID_len);
+			*ie_size = *ie_size + bi->SSID_len - ssidie[1];
+			ssidie[1] = bi->SSID_len;
 		}
 		return;
 	}
-
 	if (*(ssidie + 2) == '\0')
-		 memcpy(ssidie + 2, bi->SSID, ssid_len);
+		 memcpy(ssidie + 2, bi->SSID, bi->SSID_len);
 	return;
 }
 
@@ -13691,28 +13695,28 @@ wl_tdls_event_handler(struct bcm_cfg80211 *cfg, bcm_struct_cfgdev *cfgdev,
 #if defined(CUSTOMER_HW10)
 static void wl_tdls_enable(struct bcm_cfg80211 *cfg)
 {
-	int enable=true;
-	int err=0;
+	int enable = true;
+	int err = 0;
 	struct net_device *primary_dev = bcmcfg_to_prmry_ndev(cfg);
-	dhd_pub_t *dhd =  (dhd_pub_t *)(cfg->pub);	
+	dhd_pub_t *dhd =  (dhd_pub_t *)(cfg->pub);
 
-// #define IS_P2P_OPERATING (p2p_is_on(cfg) && cfg->p2p->vif_created )
-#define IS_P2P_OPERATING (dhd->op_mode & (DHD_FLAG_P2P_GC_MODE | DHD_FLAG_P2P_GO_MODE) )
-
+/* #define IS_P2P_OPERATING (p2p_is_on(cfg) && cfg->p2p->vif_created ) */
+#define IS_P2P_OPERATING (dhd->op_mode & (DHD_FLAG_P2P_GC_MODE | DHD_FLAG_P2P_GO_MODE))
 	if (cfg->vsdb_mode
 #if defined(DISABLE_TDLS_IN_P2P)
-		 || IS_P2P_OPERATING
+	|| IS_P2P_OPERATING
 #endif
 	) {
 		enable = false;
 	}
 
 	err = wldev_iovar_setint(primary_dev, "tdls_enable", enable);
-	if (err)
-		WL_ERR(("tdls_enable failed!!: %d\n",enable));
+	if (err) {
+		WL_ERR(("tdls_enable failed!!: %d\n", enable));
+	}
 #undef IS_P2P_OPERATING
 }
-#endif
+#endif  /* defined(CUSTOMER_HW10) */
 #endif  /* WLTDLS */
 
 #if (LINUX_VERSION_CODE > KERNEL_VERSION(3, 2, 0)) || defined(WL_COMPAT_WIRELESS)
@@ -13765,6 +13769,34 @@ out:
 	return ret;
 }
 #endif /* LINUX_VERSION > VERSION(3,2,0) || WL_COMPAT_WIRELESS */
+
+#ifdef LPS_SUPPORT
+static s32
+wl_lps_event_handler(struct bcm_cfg80211 *cfg, bcm_struct_cfgdev *cfgdev,
+	const wl_event_msg_t *e, void *data) {
+
+	struct net_device *ndev = NULL;
+	u32 reason = ntoh32(e->event_type);
+	s8 *msg = NULL;
+	ndev = cfgdev_to_wlc_ndev(cfgdev, cfg);
+
+	switch (reason) {
+	case WLC_E_PFN_BSSID_NET_FOUND :
+		msg = "WLC_E_PFN_BSSID_NET_FOUND";
+		break;
+	case WLC_E_PFN_BSSID_NET_LOST :
+		msg = "WLC_E_PFN_BSSID_NET_LOST";
+		break;
+	}
+	if (msg) {
+		wl_cfg80211_lps(ndev, reason);
+		WL_ERR(("%s: " MACDBG " on %s ndev\n", msg, MAC2STRDBG((u8*)(&e->addr)),
+			(bcmcfg_to_prmry_ndev(cfg) == ndev) ? "primary" : "secondary"));
+	}
+	return 0;
+
+}
+#endif	/* LPS_SUPPORT */
 
 s32 wl_cfg80211_set_wps_p2p_ie(struct net_device *net, char *buf, int len,
 	enum wl_management_type type)

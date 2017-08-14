@@ -1,8 +1,7 @@
-BCM43XX DHD 1.201.54.1 for L OS.
+BCM43XX DHD 1.201.54 for L OS Release Note.
 
 DHD 1.201.54.1 (2014.10.06)
   - Initial release for L OS
-
 
 DHD 1.201.54.2.1 (2014.11.14)
   - Implemented Link statistics, Gscan and RTT features
@@ -17,3 +16,28 @@ DHD 1.201.54.2.1 (2014.11.14)
   - Fixed kernel panic while disconnecting from AP (CSP#854980)
   - Handled the case that rssi was 0 during scan operation (CSP#848536)
   - Fixed unlocked wlan_wake lock problem (CSP#849645)
+
+DHD 1.201.54.3 (2014.12.26)
+  - Patched kernel crash of SoftAP (CSP#870210)
+  - Recovered link after dongle trap (CSP#865846)
+  - Patched system watchdog bark problem of SoftAP (CSP#859423)
+  - Patched to disable TDLS during P2P operation (CSP#860072)
+  - Disable phy watchdog during Miracast for 4339 only (CSP#864058)
+  - Allocated hanger memory to static buffer (CSP#867007)
+  - Applied to accept P2P probe request during P2P negotiation if there is no peer device's P2P probe request (CSP#868459)
+  - Patched wakelock problem on watchdog
+  
+DHD 1.201.54.4 (2015.02.03)
+  - Added private commands for WFDS; ADD_WFDS_HASH, DEL_WFDS_HASH (CSP#865694)
+     (This needs FW's supporting)
+  - Patched missing P2P IE for initial connection with LG DTV. (CSP#876196)
+  - Removed pointer of packet filter's union member for 64bit host CPU (CSP#877380)
+  - Added LPS feature (CSP#836412)
+  - Fixed packet count routine for TCP ack suppress not to numerate suppressed acks as dropped packets (CSP#881850)
+
+DHD 1.201.54.5 (2015.03.20)
+  - Added support for BCM43455
+
+DHD 1.201.54.6 (2015.03.23)
+  - Fixed invalid FW ram base address at BCM43455
+
