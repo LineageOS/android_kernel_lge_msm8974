@@ -4,7 +4,7 @@
  *
  * Definitions subject to change without notice.
  *
- * Copyright (C) 1999-2014, Broadcom Corporation
+ * Copyright (C) 1999-2015, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -2098,7 +2098,7 @@
 #define WL_P2P_SOCIAL_CHANNELS_MAX  WL_NUMCHANNELS
 #define MAX_WFDS_SEEK_SVC 4	/* Max # of wfds services to seek */
 #define MAX_WFDS_ADVERT_SVC 4	/* Max # of wfds services to advertise */
-#define MAX_WFDS_SVC_NAME_LEN 200	/* maximum service_name length */
+#define MAX_WFDS_SVC_NAME_LEN 255	/* maximum service_name length */
 #define MAX_WFDS_ADV_SVC_INFO_LEN 65000	/* maximum adv service_info length */
 #define P2P_WFDS_HASH_LEN 6		/* Length of a WFDS service hash */
 #define MAX_WFDS_SEEK_SVC_INFO_LEN 255	/* maximum seek service_info req length */
