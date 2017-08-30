@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "f5de2214_bdee407c",
+        "filename": "drivers/net/wireless/bcmdhd/src/dhd/sys/dhd_wlfc.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 2503,
+      "author": {
+        "id": 17323
+      },
+      "writtenOn": "2017-08-30T14:54:45Z",
+      "side": 1,
+      "message": "Bracket is missing",
+      "revId": "425af6f73c327a0b45aef2d96366aef6ee264143",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
