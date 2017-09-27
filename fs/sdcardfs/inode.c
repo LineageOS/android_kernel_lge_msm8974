@@ -85,6 +85,10 @@ static int sdcardfs_create(struct inode *dir, struct dentry *dentry,
 	/* temporarily change umask for lower fs write */
 	saved_fs = current->fs;
 	copied_fs = copy_fs_struct(current->fs);
+	if (!copied_fs) {
+		err = -ENOMEM;
+		goto out_unlock;
+	}
 	current->fs = copied_fs;
 	current->fs->umask = 0;
 	err = vfs_create(lower_parent_dentry->d_inode, lower_dentry, mode, nd);
@@ -555,7 +559,6 @@ static int sdcardfs_rename(struct inode *old_dir, struct dentry *old_dentry,
 			dput(new_parent);
 		}
 	}
-
 	/* At this point, not all dentry information has been moved, so
 	 * we pass along new_dentry for the name.*/
 	get_derived_permission_new(new_dentry->d_parent, old_dentry, new_dentry);
@@ -692,40 +695,6 @@ static int sdcardfs_permission(struct inode *inode, int mask)
 
 }
 
-static int sdcardfs_getattr(struct vfsmount *mnt, struct dentry *dentry,
-		 struct kstat *stat)
-{
-	struct dentry *lower_dentry;
-	struct inode *inode;
-	struct inode *lower_inode;
-	struct path lower_path;
-	struct dentry *parent;
-
-	parent = dget_parent(dentry);
-	if(!check_caller_access_to_name(parent->d_inode, dentry->d_name.name)) {
-		printk(KERN_INFO "%s: need to check the caller's gid in packages.list\n"
-						 "  dentry: %s, task:%s\n",
-						 __func__, dentry->d_name.name, current->comm);
-		dput(parent);
-		return -EACCES;
-	}
-	dput(parent);
-
-	inode = dentry->d_inode;
-
-	sdcardfs_get_lower_path(dentry, &lower_path);
-	lower_dentry = lower_path.dentry;
-	lower_inode = sdcardfs_lower_inode(inode);
-
-	sdcardfs_copy_and_fix_attrs(inode, lower_inode);
-	fsstack_copy_inode_size(inode, lower_inode);
-
-
-	generic_fillattr(inode, stat);
-	sdcardfs_put_lower_path(dentry, &lower_path);
-	return 0;
-}
-
 static int sdcardfs_setattr(struct dentry *dentry, struct iattr *ia)
 {
 	int err = 0;
@@ -825,6 +794,64 @@ static int sdcardfs_setattr(struct dentry *dentry, struct iattr *ia)
 out:
 	sdcardfs_put_lower_path(dentry, &lower_path);
 out_err:
+	return err;
+}
+
+static int sdcardfs_fillattr(struct inode *inode, struct kstat *stat)
+{
+	struct sdcardfs_inode_info *info = SDCARDFS_I(inode);
+	struct inode *top = grab_top(info);
+	if (!top)
+		return -EINVAL;
+
+	stat->dev = inode->i_sb->s_dev;
+	stat->ino = inode->i_ino;
+	stat->mode = (inode->i_mode  & S_IFMT) | get_mode(SDCARDFS_I(top));
+	stat->nlink = inode->i_nlink;
+	stat->uid = SDCARDFS_I(top)->d_uid;
+	stat->gid = get_gid(SDCARDFS_I(top));
+	stat->rdev = inode->i_rdev;
+	stat->size = i_size_read(inode);
+	stat->atime = inode->i_atime;
+	stat->mtime = inode->i_mtime;
+	stat->ctime = inode->i_ctime;
+	stat->blksize = (1 << inode->i_blkbits);
+	stat->blocks = inode->i_blocks;
+	release_top(info);
+	return 0;
+}
+
+static int sdcardfs_getattr(struct vfsmount *mnt, struct dentry *dentry,
+		 struct kstat *stat)
+{
+	struct dentry *lower_dentry;
+	struct inode *inode;
+	struct inode *lower_inode;
+	struct path lower_path;
+	struct dentry *parent;
+	int err;
+
+	parent = dget_parent(dentry);
+	if(!check_caller_access_to_name(parent->d_inode, dentry->d_name.name)) {
+		printk(KERN_INFO "%s: need to check the caller's gid in packages.list\n"
+						 "  dentry: %s, task:%s\n",
+						 __func__, dentry->d_name.name, current->comm);
+		dput(parent);
+		return -EACCES;
+	}
+	dput(parent);
+
+	inode = dentry->d_inode;
+
+	sdcardfs_get_lower_path(dentry, &lower_path);
+	lower_dentry = lower_path.dentry;
+	lower_inode = sdcardfs_lower_inode(inode);
+
+	sdcardfs_copy_and_fix_attrs(inode, lower_inode);
+	fsstack_copy_inode_size(inode, lower_inode);
+
+	err = sdcardfs_fillattr(inode, stat);
+	sdcardfs_put_lower_path(dentry, &lower_path);
 	return err;
 }
 
