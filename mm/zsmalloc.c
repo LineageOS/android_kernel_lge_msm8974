@@ -839,10 +839,6 @@ struct zs_pool *zs_create_pool(gfp_t flags)
 	}
 
 	pool->flags = flags;
-<<<<<<< HEAD:mm/zsmalloc.c
-=======
-	pool->name = name;
->>>>>>> c781540... staging: zsmalloc: Finish conversion to a separate module:drivers/staging/zsmalloc/zsmalloc-main.c
 
 	return pool;
 }
