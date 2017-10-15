@@ -634,7 +634,6 @@ static int ecryptfs_write_end(struct file *file,
 	struct ecryptfs_crypt_stat *crypt_stat =
 		&ecryptfs_inode_to_private(ecryptfs_inode)->crypt_stat;
 	int rc;
-	int need_unlock_page = 1;
 
 	ecryptfs_printk(KERN_DEBUG, "Calling fill_zeros_to_end_of_page"
 			"(page w/ index = [0x%.16lx], to = [%d])\n", index, to);
@@ -655,26 +654,26 @@ static int ecryptfs_write_end(struct file *file,
 			"zeros in page with index = [0x%.16lx]\n", index);
 		goto out;
 	}
-	set_page_dirty(page);
-	unlock_page(page);
-	need_unlock_page = 0;
+	rc = ecryptfs_encrypt_page(page);
+	if (rc) {
+		ecryptfs_printk(KERN_WARNING, "Error encrypting page (upper "
+				"index [0x%.16lx])\n", index);
+		goto out;
+	}
 	if (pos + copied > i_size_read(ecryptfs_inode)) {
 		i_size_write(ecryptfs_inode, pos + copied);
 		ecryptfs_printk(KERN_DEBUG, "Expanded file size to "
 			"[0x%.16llx]\n",
 			(unsigned long long)i_size_read(ecryptfs_inode));
-		balance_dirty_pages_ratelimited(mapping);
-		rc = ecryptfs_write_inode_size_to_metadata(ecryptfs_inode);
-		if (rc) {
-			printk(KERN_ERR "Error writing inode size to metadata; "
-			       "rc = [%d]\n", rc);
-			goto out;
-		}
 	}
-	rc = copied;
+	rc = ecryptfs_write_inode_size_to_metadata(ecryptfs_inode);
+	if (rc)
+		printk(KERN_ERR "Error writing inode size to metadata; "
+		       "rc = [%d]\n", rc);
+	else
+		rc = copied;
 out:
-	if (need_unlock_page)
-		unlock_page(page);
+	unlock_page(page);
 	page_cache_release(page);
 	return rc;
 }
