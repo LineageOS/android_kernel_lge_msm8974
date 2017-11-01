@@ -769,17 +769,6 @@ static int dwc3_gadget_ep0_disable(struct usb_ep *ep)
 }
 
 /* -------------------------------------------------------------------------- */
-#ifdef CONFIG_USB_G_LGE_MULTIPLE_CONFIGURATION
-static void lge_dwc3_gadget_ep_yield_request(struct usb_ep *ep,
-		struct usb_request *request)
-{
-	struct dwc3_ep *dep = to_dwc3_ep(ep);
-	struct dwc3_request *req = to_dwc3_request(request);
-
-	req->epnum	= dep->number;
-	req->dep	= dep;
-}
-#endif
 
 static int dwc3_gadget_ep_enable(struct usb_ep *ep,
 		const struct usb_endpoint_descriptor *desc)
@@ -1560,9 +1549,6 @@ static const struct usb_ep_ops dwc3_gadget_ep_ops = {
 	.dequeue	= dwc3_gadget_ep_dequeue,
 	.set_halt	= dwc3_gadget_ep_set_halt,
 	.set_wedge	= dwc3_gadget_ep_set_wedge,
-#ifdef CONFIG_USB_G_LGE_MULTIPLE_CONFIGURATION
-	.yield_request	= lge_dwc3_gadget_ep_yield_request,
-#endif
 };
 
 /* -------------------------------------------------------------------------- */
@@ -1800,9 +1786,6 @@ static int dwc3_gadget_vbus_session(struct usb_gadget *_gadget, int is_active)
 	struct dwc3 *dwc = gadget_to_dwc(_gadget);
 	unsigned long flags;
 	int ret = 0;
-#ifdef CONFIG_USB_G_LGE_ANDROID
-	bool clearly_disconnect = false;
-#endif
 	if (!dwc->dotg)
 		return -EPERM;
 
@@ -1812,20 +1795,6 @@ static int dwc3_gadget_vbus_session(struct usb_gadget *_gadget, int is_active)
 
 	/* Mark that the vbus was powered */
 	dwc->vbus_active = is_active;
-#ifdef CONFIG_USB_G_LGE_ANDROID
-/*
- * B2-BSP-USB@lge.com
- * If usb has disconnected during gadget reset,
- * gadget doesn't receive both reset interrupt and disconnect interrupt.
- * Thus, check that here.
- */
-	if (!dwc->vbus_active
-			&& dwc->softconnect
-			&& !dwc->start_config_issued
-			&& (dwc->gadget.speed != USB_SPEED_UNKNOWN)) {
-		clearly_disconnect = true;
-	}
-#endif
 	/*
 	 * Check if upper level usb_gadget_driver was already registerd with
 	 * this udc controller driver (if dwc3_gadget_start was called)
@@ -1846,20 +1815,10 @@ static int dwc3_gadget_vbus_session(struct usb_gadget *_gadget, int is_active)
 	 * Clearing run/stop bit might occur before disconnect event is seen.
 	 * Make sure to let gadget driver know in that case.
 	 */
-#ifdef CONFIG_USB_G_LGE_ANDROID
 	if (!dwc->vbus_active) {
-#else
-	if (!dwc->vbus_active && dwc->start_config_issued) {
-#endif
 		dev_dbg(dwc->dev, "calling disconnect from %s\n", __func__);
 		dwc3_gadget_disconnect_interrupt(dwc);
 	}
-#ifdef CONFIG_USB_G_LGE_ANDROID
-	else if (clearly_disconnect) {
-		dev_info(dwc->dev, "calling disconnect from %s, clearly_disconnect\n", __func__);
-		dwc3_gadget_disconnect_interrupt(dwc);
-	}
-#endif
 
 	spin_unlock_irqrestore(&dwc->lock, flags);
 	return ret;
@@ -1922,8 +1881,6 @@ void dwc3_gadget_restart(struct dwc3 *dwc)
 	else
 		reg |= dwc->maximum_speed;
 	dwc3_writel(dwc->regs, DWC3_DCFG, reg);
-
-	dwc->start_config_issued = false;
 
 	/* Start with SuperSpeed Default */
 	dwc3_gadget_ep0_desc.wMaxPacketSize = cpu_to_le16(512);
@@ -2165,12 +2122,6 @@ static int dwc3_cleanup_done_reqs(struct dwc3 *dwc, struct dwc3_ep *dep,
 			return 1;
 		}
 
-#ifdef CONFIG_USB_G_LGE_ANDROID
-		if (!(dep->flags & DWC3_EP_ENABLED)) {
-			dev_err(dwc->dev, "%s disabled while endpoint transfer.\n", dep->name);
-			return 1;
-		}
-#endif
 		trb = req->trb;
 
 		if ((trb->ctrl & DWC3_TRB_CTRL_HWO) && status != -ESHUTDOWN)
