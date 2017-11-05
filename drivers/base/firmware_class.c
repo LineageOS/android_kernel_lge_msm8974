@@ -745,6 +745,9 @@ int request_firmware_direct(const char *name, struct device *device,
 	const struct firmware *fp = NULL;
 	int ret;
 
+	if (!name || name[0] == '\0')
+		return -EINVAL;
+
 	ret = __request_firmware(&fp, name, device, dest_addr, dest_size);
 	if (ret)
 		return ret;

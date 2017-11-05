@@ -89,7 +89,7 @@ unsigned long arch_get_unmapped_area(struct file *filp, unsigned long addr, unsi
 			for (; vma; vma = vma->vm_next) {
 				if (addr > limit)
 					break;
-				if (addr + len <= vma->vm_start)
+				if (addr + len <= vm_start_gap(vma))
 					goto success;
 				addr = vma->vm_end;
 			}
@@ -104,7 +104,7 @@ unsigned long arch_get_unmapped_area(struct file *filp, unsigned long addr, unsi
 		for (; vma; vma = vma->vm_next) {
 			if (addr > limit)
 				break;
-			if (addr + len <= vma->vm_start)
+			if (addr + len <= vm_start_gap(vma))
 				goto success;
 			addr = vma->vm_end;
 		}
