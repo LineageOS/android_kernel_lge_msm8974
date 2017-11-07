@@ -124,7 +124,7 @@ struct percpu_counter vm_committed_as ____cacheline_aligned_in_smp;
  */
 int __vm_enough_memory(struct mm_struct *mm, long pages, int cap_sys_admin)
 {
-	unsigned long free, allowed;
+	long free, allowed;
 
 	vm_acct_memory(pages);
 
@@ -581,9 +581,12 @@ again:			remove_next = 1 + (end > next->vm_end);
 		 * shrinking vma had, to cover any anon pages imported.
 		 */
 		if (exporter && exporter->anon_vma && !importer->anon_vma) {
-			if (anon_vma_clone(importer, exporter))
-				return -ENOMEM;
+			int error;
+
 			importer->anon_vma = exporter->anon_vma;
+			error = anon_vma_clone(importer, exporter);
+			if (error)
+				return error;
 		}
 	}
 
@@ -846,7 +849,7 @@ struct vm_area_struct *vma_merge(struct mm_struct *mm,
 				end, prev->vm_pgoff, NULL);
 		if (err)
 			return NULL;
-		khugepaged_enter_vma_merge(prev);
+		khugepaged_enter_vma_merge(prev, vm_flags);
 		return prev;
 	}
 
@@ -865,7 +868,7 @@ struct vm_area_struct *vma_merge(struct mm_struct *mm,
 				next->vm_pgoff - pglen, NULL);
 		if (err)
 			return NULL;
-		khugepaged_enter_vma_merge(area);
+		khugepaged_enter_vma_merge(area, vm_flags);
 		return area;
 	}
 
@@ -1604,18 +1607,18 @@ try_again:
 		 */
 		vma = find_vma_prev(mm, addr, &prev);
 		vm_start = vma ? vm_start_gap(vma) : mm->mmap_base;
-		prev_end = vm_end_gap(prev);
+		prev_end = prev ? vm_end_gap(prev) : low_limit;
 
 		if (addr + len <= vm_start && addr >= prev_end)
 			/* remember the address as a hint for next time */
 			return (mm->free_area_cache = addr);
 
  		/* remember the largest hole we saw so far */
-		if (addr + mm->cached_hole_size < vm_start)
-			mm->cached_hole_size = vm_start - addr;
- 
+ 		if (addr + mm->cached_hole_size < vm_start)
+ 		        mm->cached_hole_size = vm_start - addr;
+
 		/* try just below the current vma->vm_start */
-		addr = vm_start - len;
+		addr = vm_start-len;
 	} while (len < vm_start);
 
 fail:
@@ -1763,7 +1766,8 @@ find_vma_prev(struct mm_struct *mm, unsigned long addr,
  * update accounting. This is shared with both the
  * grow-up and grow-down cases.
  */
-static int acct_stack_growth(struct vm_area_struct *vma, unsigned long size, unsigned long grow)
+static int acct_stack_growth(struct vm_area_struct *vma,
+			     unsigned long size, unsigned long grow)
 {
 	struct mm_struct *mm = vma->vm_mm;
 	struct rlimit *rlim = current->signal->rlim;
@@ -1823,10 +1827,6 @@ int expand_upwards(struct vm_area_struct *vma, unsigned long address)
 	if (!(vma->vm_flags & VM_GROWSUP))
 		return -EFAULT;
 
-	/*
-	 * We must make sure the anon_vma is allocated
-	 * so that the anon_vma locking is not a noop.
-	 */
 	/* Guard against exceeding limits of the address space. */
 	address &= PAGE_MASK;
 	if (address >= TASK_SIZE)
@@ -1875,7 +1875,7 @@ int expand_upwards(struct vm_area_struct *vma, unsigned long address)
 		}
 	}
 	vma_unlock_anon_vma(vma);
-	khugepaged_enter_vma_merge(vma);
+	khugepaged_enter_vma_merge(vma, vma->vm_flags);
 	return error;
 }
 #endif /* CONFIG_STACK_GROWSUP || CONFIG_IA64 */
@@ -1935,7 +1935,7 @@ int expand_downwards(struct vm_area_struct *vma,
 		}
 	}
 	vma_unlock_anon_vma(vma);
-	khugepaged_enter_vma_merge(vma);
+	khugepaged_enter_vma_merge(vma, vma->vm_flags);
 	return error;
 }
 
@@ -1958,14 +1958,6 @@ __setup("stack_guard_gap=", cmdline_parse_stack_guard_gap);
 #ifdef CONFIG_STACK_GROWSUP
 int expand_stack(struct vm_area_struct *vma, unsigned long address)
 {
-	struct vm_area_struct *next;
-
-	address &= PAGE_MASK;
-	next = vma->vm_next;
-	if (next && next->vm_start == address + PAGE_SIZE) {
-		if (!(next->vm_flags & VM_GROWSUP))
-			return -ENOMEM;
-	}
 	return expand_upwards(vma, address);
 }
 
@@ -1988,14 +1980,6 @@ find_extend_vma(struct mm_struct *mm, unsigned long addr)
 #else
 int expand_stack(struct vm_area_struct *vma, unsigned long address)
 {
-	struct vm_area_struct *prev;
-
-	address &= PAGE_MASK;
-	prev = vma->vm_prev;
-	if (prev && prev->vm_end == address) {
-		if (!(prev->vm_flags & VM_GROWSDOWN))
-			return -ENOMEM;
-	}
 	return expand_downwards(vma, address);
 }
 

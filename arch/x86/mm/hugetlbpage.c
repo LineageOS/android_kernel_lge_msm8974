@@ -277,7 +277,7 @@ static unsigned long hugetlb_get_unmapped_area_bottomup(struct file *file,
 	struct hstate *h = hstate_file(file);
 	struct mm_struct *mm = current->mm;
 	struct vm_area_struct *vma;
-	unsigned long start_addr;
+	unsigned long start_addr, vm_start;
 
 	if (len > mm->cached_hole_size) {
 	        start_addr = mm->free_area_cache;
@@ -303,12 +303,14 @@ full_search:
 			}
 			return -ENOMEM;
 		}
-		if (!vma || addr + len <= vma->vm_start) {
+		if (vma)
+			vm_start = vm_start_gap(vma);
+		if (!vma || addr + len <= vm_start) {
 			mm->free_area_cache = addr + len;
 			return addr;
 		}
-		if (addr + mm->cached_hole_size < vma->vm_start)
-		        mm->cached_hole_size = vma->vm_start - addr;
+		if (addr + mm->cached_hole_size < vm_start)
+			mm->cached_hole_size = vm_start - addr;
 		addr = ALIGN(vma->vm_end, huge_page_size(h));
 	}
 }
@@ -324,6 +326,7 @@ static unsigned long hugetlb_get_unmapped_area_topdown(struct file *file,
 	unsigned long addr = addr0;
 	unsigned long largest_hole = mm->cached_hole_size;
 	unsigned long start_addr;
+	unsigned long vm_start;
 
 	/* don't allow allocations above current base */
 	if (mm->free_area_cache > base)
@@ -351,7 +354,8 @@ try_again:
 		if (!vma)
 			return addr;
 
-		if (addr + len <= vma->vm_start) {
+		vm_start = vm_start_gap(vma);
+		if (addr + len <= vm_start) {
 			/* remember the address as a hint for next time */
 		        mm->cached_hole_size = largest_hole;
 		        return (mm->free_area_cache = addr);
@@ -362,12 +366,12 @@ try_again:
 		}
 
 		/* remember the largest hole we saw so far */
-		if (addr + largest_hole < vma->vm_start)
-		        largest_hole = vma->vm_start - addr;
+		if (addr + largest_hole < vm_start)
+			largest_hole = vm_start - addr;
 
 		/* try just below the current vma->vm_start */
-		addr = (vma->vm_start - len) & huge_page_mask(h);
-	} while (len <= vma->vm_start);
+		addr = (vm_start - len) & huge_page_mask(h);
+	} while (len <= vm_start);
 
 fail:
 	/*
