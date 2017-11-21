@@ -1,7 +1,7 @@
 /*
  * DHD Bus Module for SDIO
  *
- * Copyright (C) 1999-2015, Broadcom Corporation
+ * Copyright (C) 1999-2016, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -295,7 +295,9 @@ typedef struct dhd_bus {
 	int32		sd_rxchain;		/* If bcmsdh api accepts PKT chains */
 	bool		use_rxchain;		/* If dhd should use PKT chains */
 	bool		sleeping;		/* Is SDIO bus sleeping? */
+#if defined(SUPPORT_P2P_GO_PS)
 	wait_queue_head_t bus_sleep;
+#endif /* LINUX && SUPPORT_P2P_GO_PS */
 	uint		rxflow_mode;		/* Rx flow control mode */
 	bool		rxflow;			/* Is rx flow control on */
 	uint		prev_rxlim_hit;		/* Is prev rx limit exceeded (per dpc schedule) */
@@ -1538,7 +1540,9 @@ dhdsdio_bussleep(dhd_bus_t *bus, bool sleep)
 
 		/* Change state */
 		bus->sleeping = TRUE;
+#if defined(SUPPORT_P2P_GO_PS)
 		wake_up(&bus->bus_sleep);
+#endif /* LINUX && SUPPORT_P2P_GO_PS */
 	} else {
 		/* Waking up: bus power up is ok, set local state */
 
@@ -4451,7 +4455,6 @@ dhd_txglom_enable(dhd_pub_t *dhdp, bool enable)
 	 */
 	dhd_bus_t *bus = dhdp->bus;
 #ifdef BCMSDIOH_TXGLOM
-	char buf[256];
 	uint32 rxglom;
 	int32 ret;
 
@@ -4464,9 +4467,8 @@ dhd_txglom_enable(dhd_pub_t *dhdp, bool enable)
 
 	if (enable) {
 		rxglom = 1;
-		memset(buf, 0, sizeof(buf));
-		bcm_mkiovar("bus:rxglom", (void *)&rxglom, 4, buf, sizeof(buf));
-		ret = dhd_wl_ioctl_cmd(dhdp, WLC_SET_VAR, buf, sizeof(buf), TRUE, 0);
+		ret = dhd_iovar(dhdp, 0, "bus:rxglom", (char *)&rxglom, sizeof(rxglom), NULL, 0,
+			TRUE);
 		if (ret >= 0)
 			bus->txglom_enable = TRUE;
 		else {
@@ -7216,6 +7218,10 @@ dhdsdio_probe(uint16 venid, uint16 devid, uint16 bus_no, uint16 slot,
 	bus->tx_seq = SDPCM_SEQUENCE_WRAP - 1;
 	bus->usebufpool = FALSE; /* Use bufpool if allocated, else use locally malloced rxbuf */
 
+#if defined(SUPPORT_P2P_GO_PS)
+	init_waitqueue_head(&bus->bus_sleep);
+#endif /* LINUX && SUPPORT_P2P_GO_PS */
+
 	/* attempt to attach to the dongle */
 	if (!(dhdsdio_probe_attach(bus, osh, sdh, regsva, devid))) {
 		DHD_ERROR(("%s: dhdsdio_probe_attach failed\n", __FUNCTION__));
@@ -7295,8 +7301,6 @@ dhdsdio_probe(uint16 venid, uint16 devid, uint16 bus_no, uint16 slot,
 	DHD_ERROR(("%s : the lock is released.\n", __FUNCTION__));
 #endif /* (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 27)) */
 #endif 
-
-	init_waitqueue_head(&bus->bus_sleep);
 
 	return bus;
 
@@ -8158,19 +8162,22 @@ dhdsdio_suspend(void *context)
 	int ret = 0;
 
 	dhd_bus_t *bus = (dhd_bus_t*)context;
+#ifdef SUPPORT_P2P_GO_PS
 	int wait_time = 0;
 	if (bus->idletime > 0) {
 		wait_time = msecs_to_jiffies(bus->idletime * dhd_watchdog_ms);
 	}
-
+#endif /* SUPPORT_P2P_GO_PS */
 	ret = dhd_os_check_wakelock(bus->dhd);
-	if ((ret) && (bus->dhd->up)) {
+#ifdef SUPPORT_P2P_GO_PS
+	if ((ret) && (bus->dhd->up) && (bus->dhd->op_mode != DHD_FLAG_HOSTAP_MODE)) {
 		if (wait_event_timeout(bus->bus_sleep, bus->sleeping, wait_time) == 0) {
 			if (!bus->sleeping) {
 				return 1;
 			}
 		}
 	}
+#endif /* SUPPORT_P2P_GO_PS */
 	return ret;
 }
 

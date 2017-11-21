@@ -1,7 +1,7 @@
 /*
  * Broadcom Dongle Host Driver (DHD), common DHD core.
  *
- * Copyright (C) 1999-2015, Broadcom Corporation
+ * Copyright (C) 1999-2017, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: dhd_common.c 520555 2014-12-12 07:18:27Z $
+ * $Id: dhd_common.c 684926 2017-02-15 02:00:38Z $
  */
 #include <typedefs.h>
 #include <osl.h>
@@ -84,10 +84,16 @@
 #ifdef WLMEDIA_HTSF
 extern void htsf_update(struct dhd_info *dhd, void *data);
 #endif
+#if defined(DHD_EFI) && defined(EFI_WINBLD)
+extern int is_wlc_event_frame(void *pktdata, uint pktlen, uint16 exp_usr_subtype,
+	bcm_event_msg_u_t *out_event);
+#endif /* DHD_EFI && EFI_WINBLD */
 int dhd_msg_level = DHD_ERROR_VAL;
 
 
+#if defined(WL_WIRELESS_EXT)
 #include <wl_iw.h>
+#endif 
 
 #ifdef SOFTAP
 char fw_path2[MOD_PARAM_PATHLEN];
@@ -1662,35 +1668,67 @@ wl_show_host_event(dhd_pub_t *dhd_pub, wl_event_msg_t *event, void *event_data,
 }
 #endif /* SHOW_EVENTS */
 
+/* Check whether packet is a BRCM event pkt. If it is, record event data. */
 int
-wl_host_event(dhd_pub_t *dhd_pub, int *ifidx, void *pktdata,
+wl_host_event_get_data(void *pktdata, uint pktlen, bcm_event_msg_u_t *evu)
+{
+	int ret;
+
+	ret = is_wlc_event_frame(pktdata, pktlen, 0, evu);
+	if (ret != BCME_OK) {
+		DHD_ERROR(("%s: Invalid event frame, err = %d\n",
+			__FUNCTION__, ret));
+		return ret;
+	}
+
+	return ret;
+}
+
+int
+wl_host_event(dhd_pub_t *dhd_pub, int *ifidx, void *pktdata, size_t pktlen,
 	wl_event_msg_t *event, void **data_ptr, void *raw_event)
 {
-	/* check whether packet is a BRCM event pkt */
 	bcm_event_t *pvt_data = (bcm_event_t *)pktdata;
+	bcm_event_msg_u_t evu;
 	uint8 *event_data;
 	uint32 type, status, datalen;
 	uint16 flags;
-	int evlen;
+	uint evlen;
 	int hostidx;
+	int ret;
+	uint16 usr_subtype;
 
-	if (bcmp(BRCM_OUI, &pvt_data->bcm_hdr.oui[0], DOT11_OUI_LEN)) {
-		DHD_ERROR(("%s: mismatched OUI, bailing\n", __FUNCTION__));
-		return (BCME_ERROR);
+	/* make sure it is a BRCM event pkt and record event data */
+	ret = wl_host_event_get_data(pktdata, pktlen, &evu);
+	if (ret != BCME_OK) {
+		return ret;
 	}
 
-	/* BRCM event pkt may be unaligned - use xxx_ua to load user_subtype. */
-	if (ntoh16_ua((void *)&pvt_data->bcm_hdr.usr_subtype) != BCMILCP_BCM_SUBTYPE_EVENT) {
-		DHD_ERROR(("%s: mismatched subtype, bailing\n", __FUNCTION__));
-		return (BCME_ERROR);
+	usr_subtype = ntoh16_ua((void *)&pvt_data->bcm_hdr.usr_subtype);
+	switch (usr_subtype) {
+	case BCMILCP_BCM_SUBTYPE_EVENT:
+		memcpy(event, &evu.event, sizeof(wl_event_msg_t));
+		*data_ptr = &pvt_data[1];
+		break;
+	case BCMILCP_BCM_SUBTYPE_DNGLEVENT:
+#ifdef DNGL_EVENT_SUPPORT
+	/* If it is a DNGL event process it first */
+	if (dngl_host_event(dhd_pub, pktdata, &evu.dngl_event, pktlen) == BCME_OK) {
+		/*
+		 * Return error purposely to prevent DNGL event being processed
+		 * as BRCM event
+		 */
+		 return BCME_ERROR;
+	}
+#endif /* DNGL_EVENT_SUPPORT */
+		return BCME_NOTFOUND;
+	default:
+		return BCME_NOTFOUND;
 	}
 
-	*data_ptr = &pvt_data[1];
+	/* start wl_event_msg process */
+
 	event_data = *data_ptr;
-
-
-	/* memcpy since BRCM event pkt may be unaligned. */
-	memcpy(event, &pvt_data->event, sizeof(wl_event_msg_t));
 
 	type = ntoh32_ua((void *)&event->event_type);
 	flags = ntoh16_ua((void *)&event->flags);
@@ -2242,20 +2280,13 @@ void
 dhd_aoe_arp_clr(dhd_pub_t *dhd, int idx)
 {
 	int ret = 0;
-	int iov_len = 0;
-	char iovbuf[DHD_IOVAR_BUF_SIZE];
 
 	if (dhd == NULL) return;
 	if (dhd->arp_version == 1)
 		idx = 0;
 
-	iov_len = bcm_mkiovar("arp_table_clear", 0, 0, iovbuf, sizeof(iovbuf));
-	if (!iov_len) {
-		DHD_ERROR(("%s: Insufficient iovar buffer size %zu \n",
-			__FUNCTION__, sizeof(iovbuf)));
-		return;
-	}
-	if ((ret  = dhd_wl_ioctl_cmd(dhd, WLC_SET_VAR, iovbuf, iov_len, TRUE, idx)) < 0)
+	ret = dhd_iovar(dhd, idx, "arp_table_clear", NULL, 0, NULL, 0, TRUE);
+	if (ret < 0)
 		DHD_ERROR(("%s failed code %d\n", __FUNCTION__, ret));
 }
 
@@ -2263,46 +2294,29 @@ void
 dhd_aoe_hostip_clr(dhd_pub_t *dhd, int idx)
 {
 	int ret = 0;
-	int iov_len = 0;
-	char iovbuf[DHD_IOVAR_BUF_SIZE];
 
 	if (dhd == NULL) return;
 	if (dhd->arp_version == 1)
 		idx = 0;
 
-	iov_len = bcm_mkiovar("arp_hostip_clear", 0, 0, iovbuf, sizeof(iovbuf));
-	if (!iov_len) {
-		DHD_ERROR(("%s: Insufficient iovar buffer size %zu \n",
-			__FUNCTION__, sizeof(iovbuf)));
-		return;
-	}
-	if ((ret  = dhd_wl_ioctl_cmd(dhd, WLC_SET_VAR, iovbuf, iov_len, TRUE, idx)) < 0)
+	ret = dhd_iovar(dhd, idx, "arp_hostip_clear", NULL, 0, NULL, 0, TRUE);
+	if (ret < 0)
 		DHD_ERROR(("%s failed code %d\n", __FUNCTION__, ret));
 }
 
 void
 dhd_arp_offload_add_ip(dhd_pub_t *dhd, uint32 ipaddr, int idx)
 {
-	int iov_len = 0;
-	char iovbuf[DHD_IOVAR_BUF_SIZE];
-	int retcode;
-
+	int ret;
 
 	if (dhd == NULL) return;
 	if (dhd->arp_version == 1)
 		idx = 0;
-	iov_len = bcm_mkiovar("arp_hostip", (char *)&ipaddr,
-		sizeof(ipaddr), iovbuf, sizeof(iovbuf));
-	if (!iov_len) {
-		DHD_ERROR(("%s: Insufficient iovar buffer size %zu \n",
-			__FUNCTION__, sizeof(iovbuf)));
-		return;
-	}
-	retcode = dhd_wl_ioctl_cmd(dhd, WLC_SET_VAR, iovbuf, iov_len, TRUE, idx);
 
-	if (retcode)
-		DHD_TRACE(("%s: ARP ip addr add failed, retcode = %d\n",
-		__FUNCTION__, retcode));
+	ret = dhd_iovar(dhd, idx, "arp_hostip", (char *)&ipaddr, sizeof(ipaddr),
+		NULL, 0, TRUE);
+	if (ret)
+		DHD_TRACE(("%s: ARP ip addr add failed, ret = %d\n", __FUNCTION__, ret));
 	else
 		DHD_TRACE(("%s: sARP H ipaddr entry added \n",
 		__FUNCTION__));
@@ -2311,8 +2325,7 @@ dhd_arp_offload_add_ip(dhd_pub_t *dhd, uint32 ipaddr, int idx)
 int
 dhd_arp_get_arp_hostip_table(dhd_pub_t *dhd, void *buf, int buflen, int idx)
 {
-	int retcode, i;
-	int iov_len;
+	int ret, i;
 	uint32 *ptr32 = buf;
 	bool clr_bottom = FALSE;
 
@@ -2322,13 +2335,11 @@ dhd_arp_get_arp_hostip_table(dhd_pub_t *dhd, void *buf, int buflen, int idx)
 	if (dhd->arp_version == 1)
 		idx = 0;
 
-	iov_len = bcm_mkiovar("arp_hostip", 0, 0, buf, buflen);
-	BCM_REFERENCE(iov_len);
-	retcode = dhd_wl_ioctl_cmd(dhd, WLC_GET_VAR, buf, buflen, FALSE, idx);
-
-	if (retcode) {
+	ret = dhd_iovar(dhd, idx, "arp_hostip", NULL, 0, (char *)buf, buflen,
+		FALSE);
+	if (ret) {
 		DHD_TRACE(("%s: ioctl WLC_GET_VAR error %d\n",
-		__FUNCTION__, retcode));
+		__FUNCTION__, ret));
 
 		return -1;
 	}
@@ -2802,6 +2813,80 @@ int dhd_keep_alive_onoff(dhd_pub_t *dhd)
 	return res;
 }
 #endif /* defined(KEEP_ALIVE) */
+#define	CSCAN_TLV_TYPE_SSID_IE	'S'
+/*
+ *  SSIDs list parsing from cscan tlv list
+ */
+int
+wl_parse_ssid_list_tlv(char** list_str, wlc_ssid_ext_t* ssid, int max, int *bytes_left)
+{
+	char* str;
+	int idx = 0;
+
+	if ((list_str == NULL) || (*list_str == NULL) || (*bytes_left < 0)) {
+		DHD_ERROR(("%s error paramters\n", __FUNCTION__));
+		return -1;
+	}
+	str = *list_str;
+	while (*bytes_left > 0) {
+
+		if (str[0] != CSCAN_TLV_TYPE_SSID_IE) {
+			*list_str = str;
+			DHD_TRACE(("nssid=%d left_parse=%d %d\n", idx, *bytes_left, str[0]));
+			return idx;
+		}
+
+		/* Get proper CSCAN_TLV_TYPE_SSID_IE */
+		*bytes_left -= 1;
+		str += 1;
+
+		if (str[0] == 0) {
+			/* Broadcast SSID */
+			ssid[idx].SSID_len = 0;
+			memset((char*)ssid[idx].SSID, 0x0, DOT11_MAX_SSID_LEN);
+			*bytes_left -= 1;
+			str += 1;
+
+			DHD_TRACE(("BROADCAST SCAN  left=%d\n", *bytes_left));
+		}
+		else if (str[0] <= DOT11_MAX_SSID_LEN) {
+			/* Get proper SSID size */
+			ssid[idx].SSID_len = str[0];
+			*bytes_left -= 1;
+			str += 1;
+
+			/* Get SSID */
+			if (ssid[idx].SSID_len > *bytes_left) {
+				DHD_ERROR(("%s out of memory range len=%d but left=%d\n",
+				__FUNCTION__, ssid[idx].SSID_len, *bytes_left));
+				return -1;
+			}
+
+			memcpy((char*)ssid[idx].SSID, str, ssid[idx].SSID_len);
+
+			*bytes_left -= ssid[idx].SSID_len;
+			str += ssid[idx].SSID_len;
+			ssid[idx].hidden = TRUE;
+
+			DHD_TRACE(("%s :size=%d left=%d\n",
+				(char*)ssid[idx].SSID, ssid[idx].SSID_len, *bytes_left));
+		}
+		else {
+			DHD_ERROR(("### SSID size more that %d\n", str[0]));
+			return -1;
+		}
+
+		if (idx++ >  max) {
+			DHD_ERROR(("%s number of SSIDs more that %d\n", __FUNCTION__, idx));
+			return -1;
+		}
+	}
+
+	*list_str = str;
+	return idx;
+}
+
+#if defined(WL_WIRELESS_EXT)
 /* Android ComboSCAN support */
 
 /*
@@ -2902,78 +2987,6 @@ wl_iw_parse_channel_list_tlv(char** list_str, uint16* channel_list,
 	return idx;
 }
 
-/*
- *  SSIDs list parsing from cscan tlv list
- */
-int
-wl_iw_parse_ssid_list_tlv(char** list_str, wlc_ssid_ext_t* ssid, int max, int *bytes_left)
-{
-	char* str;
-	int idx = 0;
-
-	if ((list_str == NULL) || (*list_str == NULL) || (*bytes_left < 0)) {
-		DHD_ERROR(("%s error paramters\n", __FUNCTION__));
-		return -1;
-	}
-	str = *list_str;
-	while (*bytes_left > 0) {
-
-		if (str[0] != CSCAN_TLV_TYPE_SSID_IE) {
-			*list_str = str;
-			DHD_TRACE(("nssid=%d left_parse=%d %d\n", idx, *bytes_left, str[0]));
-			return idx;
-		}
-
-		/* Get proper CSCAN_TLV_TYPE_SSID_IE */
-		*bytes_left -= 1;
-		str += 1;
-
-		if (str[0] == 0) {
-			/* Broadcast SSID */
-			ssid[idx].SSID_len = 0;
-			memset((char*)ssid[idx].SSID, 0x0, DOT11_MAX_SSID_LEN);
-			*bytes_left -= 1;
-			str += 1;
-
-			DHD_TRACE(("BROADCAST SCAN  left=%d\n", *bytes_left));
-		}
-		else if (str[0] <= DOT11_MAX_SSID_LEN) {
-			/* Get proper SSID size */
-			ssid[idx].SSID_len = str[0];
-			*bytes_left -= 1;
-			str += 1;
-
-			/* Get SSID */
-			if (ssid[idx].SSID_len > *bytes_left) {
-				DHD_ERROR(("%s out of memory range len=%d but left=%d\n",
-				__FUNCTION__, ssid[idx].SSID_len, *bytes_left));
-				return -1;
-			}
-
-			memcpy((char*)ssid[idx].SSID, str, ssid[idx].SSID_len);
-
-			*bytes_left -= ssid[idx].SSID_len;
-			str += ssid[idx].SSID_len;
-			ssid[idx].hidden = TRUE;
-
-			DHD_TRACE(("%s :size=%d left=%d\n",
-				(char*)ssid[idx].SSID, ssid[idx].SSID_len, *bytes_left));
-		}
-		else {
-			DHD_ERROR(("### SSID size more that %d\n", str[0]));
-			return -1;
-		}
-
-		if (idx++ >  max) {
-			DHD_ERROR(("%s number of SSIDs more that %d\n", __FUNCTION__, idx));
-			return -1;
-		}
-	}
-
-	*list_str = str;
-	return idx;
-}
-
 /* Parse a comma-separated list from list_str into ssid array, starting
  * at index idx.  Max specifies size of the ssid array.  Parses ssids
  * and returns updated idx; if idx >= max not all fit, the excess have
@@ -3054,3 +3067,5 @@ wl_iw_parse_channel_list(char** list_str, uint16* channel_list, int channel_num)
 	*list_str = str;
 	return num;
 }
+
+#endif 

@@ -1,6 +1,6 @@
 /*
 * Customer HW 10 dependant file
-* Copyright (C) 1999-2015, Broadcom Corporation
+* Copyright (C) 1999-2016, Broadcom Corporation
 * 
 *      Unless you and Broadcom execute a separate written software license
 * agreement governing use of this software, this software is licensed to you
@@ -430,7 +430,9 @@ int dhd_adjust_tcp_winsize(int index, int pk_type, int op_mode, struct sk_buff *
 int set_softap_params(dhd_pub_t *dhd)
 {
 	uint32 iovar_set;
+#if defined(BCM4335_CHIP) || defined(BCM4339_CHIP)
 	char iov_buf[WLC_IOCTL_SMLEN];
+#endif
 	int ret = 0;
 	if (dhd->op_mode & DHD_FLAG_HOSTAP_MODE) {
 #ifdef BCMSDIO
@@ -450,13 +452,12 @@ int set_softap_params(dhd_pub_t *dhd)
 #endif
 
 		iovar_set = 10;
-		bcm_mkiovar("ampdu_retry_limit", (char *)&iovar_set, 4, iov_buf, sizeof(iov_buf));
-		dhd_wl_ioctl_cmd(dhd, WLC_SET_VAR, iov_buf, sizeof(iov_buf), TRUE, 0);
+		dhd_iovar(dhd, 0, "ampdu_retry_limit", (char *)&iovar_set, sizeof(iovar_set),
+			NULL, 0, TRUE);
 
 		iovar_set = 5;
-		bcm_mkiovar("ampdu_rr_retry_limit", (char *)&iovar_set, 4, iov_buf,
-		 sizeof(iov_buf));
-		dhd_wl_ioctl_cmd(dhd, WLC_SET_VAR, iov_buf, sizeof(iov_buf), TRUE, 0);	
+		dhd_iovar(dhd, 0, "ampdu_rr_retry_limit", (char *)&iovar_set, sizeof(iovar_set),
+			NULL, 0, TRUE);
 
 #if defined(BCM43455_CHIP) || defined(BCM4339_CHIP)
 		iovar_set = 13;
@@ -480,30 +481,28 @@ int set_softap_params(dhd_pub_t *dhd)
 
 #ifdef BCM4334_CHIP
 		iovar_set = 0;
-		bcm_mkiovar("ampdu_rts", (char *)&iovar_set, 4, iov_buf, sizeof(iov_buf));
-		dhd_wl_ioctl_cmd(dhd, WLC_SET_VAR, iov_buf, sizeof(iov_buf), TRUE, 0);
+		dhd_iovar(dhd, 0, "ampdu_rts", (char *)&iovar_set, sizeof(iovar_set),
+			NULL, 0, TRUE);
 
 		iovar_set = 1;
-		dhd_wl_ioctl_cmd(dhd, WLC_SET_FAKEFRAG, (char *)&iov_buf, sizeof(iov_buf), TRUE, 0);
+		if ((ret = dhd_wl_ioctl_cmd(dhd, WLC_SET_FAKEFRAG, (char *)&iovar_set,
+			sizeof(iovar_set), TRUE, 0)) < 0) {
+			DHD_ERROR(("%s Set frameburst failed  %d\n", __FUNCTION__, ret));
+		}
 #endif
 
 #if defined(BCM4335_CHIP) || defined(BCM4339_CHIP)
-		bcm_mkiovar("bus:txglom_auto_control", 0, 0, iov_buf, sizeof(iov_buf));
-		if ((ret = dhd_wl_ioctl_cmd(dhd, WLC_GET_VAR, iov_buf, sizeof(iov_buf),
-			FALSE, 0)) < 0) {
+		if ((ret = dhd_iovar(dhd, 0, "bus:txglom_auto_control", NULL, 0,
+			(char *)iov_buf, sizeof(iov_buf), FALSE)) < 0) {
 				iovar_set = 0;
-				bcm_mkiovar("bus:txglom", (char *)&iovar_set, 4, iov_buf,
-				 sizeof(iov_buf));
-				dhd_wl_ioctl_cmd(dhd, WLC_SET_VAR, iov_buf, sizeof(iov_buf),
-				 TRUE, 0);
+				dhd_iovar(dhd, 0, "bus:txglom", (char *)&iovar_set,
+					sizeof(iovar_set), NULL, 0, TRUE);
 		}
 		else {
 			if (iov_buf[0] == 0) {
 				iovar_set = 1;
-				bcm_mkiovar("bus:txglom_auto_control", (char *)&iovar_set, 4,
-				 iov_buf, sizeof(iov_buf));
-				dhd_wl_ioctl_cmd(dhd, WLC_SET_VAR, iov_buf, sizeof(iov_buf),
-				 TRUE, 0);
+				dhd_iovar(dhd, 0, "bus:txglom_auto_control", (char *)&iovar_set,
+					sizeof(iovar_set), NULL, 0, TRUE);
 			}
 		}
 #endif /* defined(BCM4335_CHIP) || defined(BCM4339_CHIP) */
