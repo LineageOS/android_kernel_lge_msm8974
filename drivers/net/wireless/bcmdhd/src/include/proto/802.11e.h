@@ -1,7 +1,7 @@
 /*
  * 802.11e protocol header file
  *
- * Copyright (C) 1999-2015, Broadcom Corporation
+ * Copyright (C) 1999-2016, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -21,7 +21,10 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: 802.11e.h 382883 2013-02-04 23:26:09Z $
+ *
+ * <<Broadcom-WL-IPTag/Open:>>
+ *
+ * $Id: 802.11e.h 572688 2015-07-20 17:49:21Z $
  */
 
 #ifndef _802_11e_H_
@@ -33,7 +36,6 @@
 
 /* This marks the start of a packed structure section. */
 #include <packed_section_start.h>
-
 
 /* WME Traffic Specification (TSPEC) element */
 #define WME_TSPEC_HDR_LEN           2           /* WME TSPEC header length */

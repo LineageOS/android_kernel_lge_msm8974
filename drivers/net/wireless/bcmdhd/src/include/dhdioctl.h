@@ -5,7 +5,7 @@
  *
  * Definitions subject to change without notice.
  *
- * Copyright (C) 1999-2015, Broadcom Corporation
+ * Copyright (C) 1999-2016, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -25,7 +25,10 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: dhdioctl.h 515169 2014-11-13 13:19:49Z $
+ *
+ * <<Broadcom-WL-IPTag/Open:>>
+ *
+ * $Id: dhdioctl.h 639091 2016-05-20 05:55:57Z $
  */
 
 #ifndef _dhdioctl_h_
@@ -86,7 +89,7 @@ enum {
 #define DHD_GLOM_VAL	0x0400
 #define DHD_EVENT_VAL	0x0800
 #define DHD_BTA_VAL	0x1000
-#define DHD_ISCAN_VAL	0x2000
+#define DHD_RING_VAL	0x2000
 #define DHD_ARPOE_VAL	0x4000
 #define DHD_REORDER_VAL	0x8000
 #define DHD_WL_VAL		0x10000
@@ -94,6 +97,8 @@ enum {
 #define DHD_WL_VAL2		0x40000
 #define DHD_PNO_VAL		0x80000
 #define DHD_RTT_VAL		0x100000
+#define DHD_PKT_MON_VAL	0x200000
+#define DHD_PKT_MON_DUMP_VAL	0x400000
 
 #ifdef SDTEST
 /* For pktgen iovar */

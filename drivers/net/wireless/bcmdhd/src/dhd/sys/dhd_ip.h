@@ -3,7 +3,7 @@
  *
  * Provides type definitions and function prototypes used to parse ip packet.
  *
- * Copyright (C) 1999-2015, Broadcom Corporation
+ * Copyright (C) 1999-2016, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -23,7 +23,10 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: dhd_ip.h 502735 2014-09-16 00:53:02Z $
+ *
+ * <<Broadcom-WL-IPTag/Open:>>
+ *
+ * $Id: dhd_ip.h 537119 2015-02-25 04:24:14Z $
  */
 
 #ifndef _dhd_ip_h_
@@ -44,7 +47,6 @@ typedef enum pkt_frag
 } pkt_frag_t;
 
 extern pkt_frag_t pkt_frag_info(osl_t *osh, void *p);
-extern bool pkt_is_dhcp(osl_t *osh, void *p);
 
 #ifdef DHDTCPACK_SUPPRESS
 #define	TCPACKSZMIN	(ETHER_HDR_LEN + IPV4_MIN_HEADER_LEN + TCP_MIN_HEADER_LEN)
@@ -58,8 +60,15 @@ extern bool pkt_is_dhcp(osl_t *osh, void *p);
 
 #define TCPDATA_INFO_TIMEOUT 5000	/* Remove tcpdata_info if inactive for this time (in ms) */
 
-#define TCPACK_SUPP_RATIO 3
-#define TCPACK_DELAY_TIME 10 /* ms */
+#define DEFAULT_TCPACK_SUPP_RATIO 3
+#ifndef CUSTOM_TCPACK_SUPP_RATIO
+#define CUSTOM_TCPACK_SUPP_RATIO DEFAULT_TCPACK_SUPP_RATIO
+#endif /* CUSTOM_TCPACK_SUPP_RATIO */
+
+#define DEFAULT_TCPACK_DELAY_TIME 10 /* ms */
+#ifndef CUSTOM_TCPACK_DELAY_TIME
+#define CUSTOM_TCPACK_DELAY_TIME DEFAULT_TCPACK_DELAY_TIME
+#endif /* CUSTOM_TCPACK_DELAY_TIME */
 
 extern int dhd_tcpack_suppress_set(dhd_pub_t *dhdp, uint8 on);
 extern void dhd_tcpack_info_tbl_clean(dhd_pub_t *dhdp);

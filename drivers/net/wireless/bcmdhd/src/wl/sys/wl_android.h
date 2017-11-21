@@ -1,7 +1,7 @@
 /*
  * Linux cfg80211 driver - Android related functions
  *
- * Copyright (C) 1999-2015, Broadcom Corporation
+ * Copyright (C) 1999-2016, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -21,7 +21,10 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: wl_android.h 487838 2014-06-27 05:51:44Z $
+ *
+ * <<Broadcom-WL-IPTag/Open:>>
+ *
+ * $Id: wl_android.h 556083 2015-05-12 14:03:00Z $
  */
 
 #include <linux/module.h>
@@ -54,7 +57,7 @@ int wl_android_init(void);
 int wl_android_exit(void);
 void wl_android_post_init(void);
 int wl_android_wifi_on(struct net_device *dev);
-int wl_android_wifi_off(struct net_device *dev);
+int wl_android_wifi_off(struct net_device *dev, bool on_failure);
 int wl_android_priv_cmd(struct net_device *net, struct ifreq *ifr, int cmd);
 
 #ifdef WL_GENL
@@ -91,7 +94,9 @@ enum {
 	BCM_E_SVC_FOUND,
 	BCM_E_DEV_FOUND,
 	BCM_E_DEV_LOST,
+#ifdef BT_WIFI_HANDOVER
 	BCM_E_DEV_BT_WIFI_HO_REQ,
+#endif
 	BCM_E_MAX
 };
 
@@ -108,6 +113,10 @@ s32 wl_netlink_send_msg(int pid, int type, int seq, void *data, size_t size);
 /* max number of assoc list */
 #define MAX_NUM_OF_ASSOCLIST    64
 
+/* Bandwidth */
+#define WL_CH_BANDWIDTH_20MHZ 20
+#define WL_CH_BANDWIDTH_40MHZ 40
+#define WL_CH_BANDWIDTH_80MHZ 80
 /* max number of mac filter list
  * restrict max number to 10 as maximum cmd string size is 255
  */

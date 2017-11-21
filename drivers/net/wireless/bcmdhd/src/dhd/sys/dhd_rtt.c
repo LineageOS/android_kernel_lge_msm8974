@@ -1,13 +1,14 @@
 /*
- * Header file of Broadcom Dongle Host Driver (DHD)
- * Copyright (C) 1999-2014, Broadcom Corporation
+ * Broadcom Dongle Host Driver (DHD), RTT
  *
+ * Copyright (C) 1999-2016, Broadcom Corporation
+ * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
  * under the terms of the GNU General Public License version 2 (the "GPL"),
  * available at http://www.broadcom.com/licenses/GPLv2.php, with the
  * following added to such license:
- *
+ * 
  *      As a special exception, the copyright holders of this software give you
  * permission to link this software with independent modules, and to copy and
  * distribute the resulting executable under terms of your choice, provided that
@@ -15,13 +16,14 @@
  * the license of that module.  An independent module is a module which is not
  * derived from this software.  The special exception does not apply to any
  * modifications of the software.
- *
+ * 
  *      Notwithstanding the above, under no circumstances may you combine this
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: dhd_rtt.c 423669 2014-07-01 13:01:55Z $
+ * $Id: dhd_rtt.c 558438 2015-05-22 06:05:11Z $
  */
+#ifdef RTT_SUPPORT
 #include <typedefs.h>
 #include <osl.h>
 
@@ -78,7 +80,9 @@ typedef struct rtt_status_info {
 	struct list_head noti_fn_list;
 	struct list_head rtt_results_cache; /* store results for RTT */
 } rtt_status_info_t;
+
 static int dhd_rtt_start(dhd_pub_t *dhd);
+
 chanspec_t
 dhd_rtt_convert_to_chspec(wifi_channel_info_t channel)
 {
@@ -107,6 +111,7 @@ dhd_rtt_convert_to_chspec(wifi_channel_info_t channel)
 	}
 	return wf_channel2chspec(wf_mhz2channel(channel.center_freq, 0), bw);
 }
+
 int
 dhd_rtt_set_cfg(dhd_pub_t *dhd, rtt_config_params_t *params)
 {
@@ -147,6 +152,7 @@ dhd_rtt_set_cfg(dhd_pub_t *dhd, rtt_config_params_t *params)
 	}
 	return err;
 }
+
 int
 dhd_rtt_stop(dhd_pub_t *dhd, struct ether_addr *mac_list, int mac_cnt)
 {
@@ -228,6 +234,9 @@ dhd_rtt_start(dhd_pub_t *dhd)
 		DHD_ERROR(("%s : failed to set proxd %d\n", __FUNCTION__, err));
 		goto exit;
 	}
+	if (err == BCME_BUSY) {
+		DHD_RTT(("BCME_BUSY occurred\n"));
+	}
 	/* mac address */
 	bcopy(&rtt_target->addr, &tof_params->tgt_mac, ETHER_ADDR_LEN);
 	/* frame count */
@@ -294,7 +303,6 @@ dhd_rtt_start(dhd_pub_t *dhd)
 			DHD_ERROR(("CHSPEC_BW not supported : %d",
 				CHSPEC_BW(rtt_target->chanspec)));
 			goto exit;
-			break;
 		}
 		rspec |= bw;
 		tof_params->tx_rate = htol16(rspec & 0xffff);
@@ -332,6 +340,7 @@ exit:
 	}
 	return err;
 }
+
 int
 dhd_rtt_register_noti_callback(dhd_pub_t *dhd, void *ctx, dhd_rtt_compl_noti_fn noti_fn)
 {
@@ -344,10 +353,11 @@ dhd_rtt_register_noti_callback(dhd_pub_t *dhd, void *ctx, dhd_rtt_compl_noti_fn 
 	rtt_status = GET_RTTSTATE(dhd);
 	NULL_CHECK(rtt_status, "rtt_status is NULL", err);
 	spin_lock_bh(&noti_list_lock);
-	list_for_each_entry(iter, &rtt_status->noti_fn_list, list)
+	list_for_each_entry(iter, &rtt_status->noti_fn_list, list) {
 		if (iter->noti_fn == noti_fn) {
 			goto exit;
 		}
+	}
 	cb = kmalloc(sizeof(struct rtt_noti_callback), GFP_ATOMIC);
 	if (!cb) {
 		err = -ENOMEM;
@@ -372,18 +382,20 @@ dhd_rtt_unregister_noti_callback(dhd_pub_t *dhd, dhd_rtt_compl_noti_fn noti_fn)
 	rtt_status = GET_RTTSTATE(dhd);
 	NULL_CHECK(rtt_status, "rtt_status is NULL", err);
 	spin_lock_bh(&noti_list_lock);
-	list_for_each_entry(iter, &rtt_status->noti_fn_list, list)
+	list_for_each_entry(iter, &rtt_status->noti_fn_list, list) {
 		if (iter->noti_fn == noti_fn) {
 			cb = iter;
 			list_del(&cb->list);
 			break;
 		}
+	}
 	spin_unlock_bh(&noti_list_lock);
 	if (cb) {
 		kfree(cb);
 	}
 	return err;
 }
+
 static int
 dhd_rtt_convert_to_host(rtt_result_t *rtt_results, const wl_proxd_event_data_t* evp)
 {
@@ -422,7 +434,7 @@ dhd_rtt_convert_to_host(rtt_result_t *rtt_results, const wl_proxd_event_data_t* 
 		sprintf(diststr, "distance=-1m\n");
 	} else {
 		sprintf(diststr, "distance=%d.%d m\n",
-			rtt_results->distance>>4, ((rtt_results->distance&0xf)*125)>>1);
+			rtt_results->distance >> 4, ((rtt_results->distance & 0xf) * 125) >> 1);
 	}
 
 	if (ntoh32(evp->mode) == WL_PROXD_MODE_INITIATOR) {
@@ -469,6 +481,7 @@ dhd_rtt_convert_to_host(rtt_result_t *rtt_results, const wl_proxd_event_data_t* 
 	}
 	return err;
 }
+
 int
 dhd_rtt_event_handler(dhd_pub_t *dhd, wl_event_msg_t *event, void *event_data)
 {
@@ -512,7 +525,7 @@ dhd_rtt_event_handler(dhd_pub_t *dhd, wl_event_msg_t *event, void *event_data)
 		if (!in_atomic()) {
 			mutex_lock(&rtt_status->rtt_mutex);
 		}
-		ftm_cnt = ltoh16(evp->ftm_cnt);
+		ftm_cnt = ntoh16(evp->ftm_cnt);
 
 		if (ftm_cnt > 0) {
 			len = OFFSETOF(rtt_result_t, ftm_buff);
@@ -574,7 +587,7 @@ dhd_rtt_event_handler(dhd_pub_t *dhd, wl_event_msg_t *event, void *event_data)
 			/* reinit the HEAD */
 			INIT_LIST_HEAD(&rtt_status->rtt_results_cache);
 			/* clear information for rtt_config */
-			bzero(&rtt_status->rtt_config, sizeof(rtt_config_params_t));
+			bzero(&rtt_status->rtt_config, sizeof(rtt_status->rtt_config));
 			rtt_status->cur_idx = 0;
 		}
 		if (!in_atomic()) {
@@ -609,6 +622,7 @@ dhd_rtt_event_handler(dhd_pub_t *dhd, wl_event_msg_t *event, void *event_data)
 exit:
 	return err;
 }
+
 static void
 dhd_rtt_work(struct work_struct *work)
 {
@@ -653,6 +667,7 @@ dhd_rtt_capability(dhd_pub_t *dhd, rtt_capabilities_t *capa)
 
 	return err;
 }
+
 int
 dhd_rtt_init(dhd_pub_t *dhd)
 {
@@ -674,6 +689,7 @@ dhd_rtt_init(dhd_pub_t *dhd)
 	if (err != BCME_UNSUPPORTED) {
 		rtt_status->capability |= RTT_CAP_ONE_WAY;
 		rtt_status->capability |= RTT_CAP_VS_WAY;
+		DHD_ERROR(("%s: Support RTT Service\n", __FUNCTION__));
 	}
 	mutex_init(&rtt_status->rtt_mutex);
 	INIT_LIST_HEAD(&rtt_status->noti_fn_list);
@@ -712,3 +728,4 @@ dhd_rtt_deinit(dhd_pub_t *dhd)
 	dhd->rtt_state = NULL;
 	return err;
 }
+#endif /* RTT_SUPPORT */

@@ -1,7 +1,7 @@
 /*
  * Linux DHD Bus Module for PCIE
  *
- * Copyright (C) 1999-2015, Broadcom Corporation
+ * Copyright (C) 1999-2016, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -21,7 +21,10 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: dhd_pcie.h 506477 2014-10-06 09:31:57Z $
+ *
+ * <<Broadcom-WL-IPTag/Open:>>
+ *
+ * $Id: dhd_pcie.h 624099 2016-03-10 08:02:03Z $
  */
 
 
@@ -32,13 +35,28 @@
 #include <hnd_cons.h>
 #ifdef SUPPORT_LINKDOWN_RECOVERY
 #ifdef CONFIG_ARCH_MSM
-#ifdef CONFIG_ARCH_MSM8994
+#if defined(CONFIG_ARCH_MSM8994) ||defined(CONFIG_ARCH_MSM8996)
 #include <linux/msm_pcie.h>
 #else
 #include <mach/msm_pcie.h>
-#endif
+#endif /* CONFIG_ARCH_MSM8994 */
 #endif /* CONFIG_ARCH_MSM */
 #endif /* SUPPORT_LINKDOWN_RECOVERY */
+
+#ifdef DHD_PCIE_RUNTIMEPM
+#include <linux/mutex.h>
+#include <linux/wait.h>
+#define DEFAULT_DHD_RUNTIME_MS 100
+#ifndef CUSTOM_DHD_RUNTIME_MS
+#define CUSTOM_DHD_RUNTIME_MS DEFAULT_DHD_RUNTIME_MS
+#endif /* CUSTOM_DHD_RUNTIME_MS */
+#ifndef MAX_IDLE_COUNT
+#define MAX_IDLE_COUNT 16
+#endif /* MAX_IDLE_COUNT */
+#ifndef MAX_RESUME_WAIT
+#define MAX_RESUME_WAIT 100
+#endif /* MAX_RESUME_WAIT */
+#endif /* DHD_PCIE_RUNTIMEPM */
 
 /* defines */
 
@@ -53,14 +71,22 @@
 #define	REMAP_ENAB(bus)			((bus)->remap)
 #define	REMAP_ISADDR(bus, a)		(((a) >= ((bus)->orig_ramsize)) && ((a) < ((bus)->ramsize)))
 
-#define MAX_DHD_TX_FLOWS	256
+/*
+ * Router with 4366 can have 128 stations and 16 BSS,
+ * hence (128 stations x 4 access categories for ucast) + 16 bc/mc flowrings
+ */
+#define MAX_DHD_TX_FLOWS	320
 
 /* user defined data structures */
-#ifdef DHD_DEBUG
 /* Device console log buffer state */
 #define CONSOLE_LINE_MAX	192
 #define CONSOLE_BUFFER_MAX	2024
 
+#ifndef MAX_CNTL_D3ACK_TIMEOUT
+#define MAX_CNTL_D3ACK_TIMEOUT 2
+#endif /* MAX_CNTL_D3ACK_TIMEOUT */
+
+#ifdef DHD_DEBUG
 
 typedef struct dhd_console {
 	 uint		count;	/* Poll interval msec counter */
@@ -102,13 +128,12 @@ typedef struct dhd_bus {
 	uint16		cl_devid;		/* cached devid for dhdsdio_probe_attach() */
 	char		*fw_path;		/* module_param: path to firmware image */
 	char		*nv_path;		/* module_param: path to nvram vars file */
-	char		*nvram_params;		/* user specified nvram params. */
-	int		nvram_params_len;
+#ifdef CACHE_FW_IMAGES
+	int			processed_nvram_params_len;	/* Modified len of NVRAM info */
+#endif
+
 
 	struct pktq	txq;			/* Queue length used for flow-control */
-
-	uint		rxlen;			/* Length of valid data in buffer */
-
 
 	bool		intr;			/* Use interrupts */
 	bool		ipend;			/* Device interrupt is pending */
@@ -133,15 +158,9 @@ typedef struct dhd_bus {
 	ulong		shared_addr;
 	pciedev_shared_t	*pcie_sh;
 	bool bus_flowctrl;
-	ioctl_comp_resp_msg_t	ioct_resp;
 	uint32		dma_rxoffset;
 	volatile char	*regs;		/* pci device memory va */
 	volatile char	*tcm;		/* pci device memory va */
-	uint32		tcm_size;
-#ifdef CONFIG_ARCH_MSM8994
-	uint32		bar1_win_base;
-	uint32		bar1_win_mask;
-#endif
 	osl_t		*osh;
 	uint32		nvram_csm;	/* Nvram checksum */
 	uint16		pollrate;
@@ -167,23 +186,38 @@ typedef struct dhd_bus {
 	uint32 def_intmask;
 	bool	ltrsleep_on_unload;
 	uint	wait_for_d3_ack;
-	uint8	txmode_push;
 	uint32 max_sub_queues;
+	uint32	rw_index_sz;
 	bool	db1_for_mb;
 	bool	suspended;
+
+	dhd_timeout_t doorbell_timer;
+	bool	device_wake_state;
+#ifdef PCIE_OOB
+	bool	oob_enabled;
+#endif /* PCIE_OOB */
 #ifdef SUPPORT_LINKDOWN_RECOVERY
 #ifdef CONFIG_ARCH_MSM
+	uint8 no_cfg_restore;
 	struct msm_pcie_register_event pcie_event;
-	bool islinkdown;
 #endif /* CONFIG_ARCH_MSM */
 #endif /* SUPPORT_LINKDOWN_RECOVERY */
-#ifdef PCIE_TX_DEFERRAL
-	struct workqueue_struct *tx_wq;
-	struct work_struct create_flow_work;
-	struct work_struct delete_flow_work;
-	unsigned long *delete_flow_map;
-	struct sk_buff_head orphan_list;
-#endif /* PCIE_TX_DEFERRAL */
+#ifdef DHD_PCIE_RUNTIMEPM
+	int32 idlecount;                /* Activity timeout counter */
+	int32 idletime;                 /* Control for activity timeout */
+	int32 bus_wake;                 /* For wake up the bus */
+	bool runtime_resume_done;       /* For check runtime suspend end */
+	struct mutex pm_lock;            /* Synchronize for system PM & runtime PM */
+	wait_queue_head_t rpm_queue;    /* wait-queue for bus wake up */
+#endif /* DHD_PCIE_RUNTIMEPM */
+	uint32 d3_inform_cnt;
+	uint32 d0_inform_cnt;
+	uint32 d0_inform_in_use_cnt;
+	uint8 force_suspend;
+	uint32 d3_ack_war_cnt;
+	uint32 oob_irq_num;
+	uint8 is_linkdown;
+	uint32 pci_d3hot_done;
 } dhd_bus_t;
 
 /* function declarations */
@@ -193,18 +227,23 @@ extern int dhdpcie_bus_register(void);
 extern void dhdpcie_bus_unregister(void);
 extern bool dhdpcie_chipmatch(uint16 vendor, uint16 device);
 
-extern struct dhd_bus* dhdpcie_bus_attach(osl_t *osh, volatile char* regs,
-	volatile char* tcm, uint32 tcm_size);
+extern struct dhd_bus* dhdpcie_bus_attach(osl_t *osh,
+	volatile char *regs, volatile char *tcm, void *pci_dev);
 extern uint32 dhdpcie_bus_cfg_read_dword(struct dhd_bus *bus, uint32 addr, uint32 size);
 extern void dhdpcie_bus_cfg_write_dword(struct dhd_bus *bus, uint32 addr, uint32 size, uint32 data);
+extern void dhdpcie_bus_intr_enable(struct dhd_bus *bus);
 extern void dhdpcie_bus_intr_disable(struct dhd_bus *bus);
-extern void dhdpcie_bus_remove_prep(struct dhd_bus *bus);
 extern void dhdpcie_bus_release(struct dhd_bus *bus);
 extern int32 dhdpcie_bus_isr(struct dhd_bus *bus);
 extern void dhdpcie_free_irq(dhd_bus_t *bus);
+extern void dhdpcie_bus_ringbell_fast(struct dhd_bus *bus, uint32 value);
 extern int dhdpcie_bus_suspend(struct  dhd_bus *bus, bool state);
-extern int dhdpcie_pci_suspend_resume(struct dhd_bus *bus, bool state);
+extern int dhdpcie_pci_suspend_resume(struct  dhd_bus *bus, bool state);
+extern bool dhdpcie_tcm_valid(dhd_bus_t *bus);
+#ifndef BCMPCIE_OOB_HOST_WAKE
 extern void dhdpcie_pme_active(osl_t *osh, bool enable);
+#endif /* !BCMPCIE_OOB_HOST_WAKE */
+extern bool dhdpcie_pme_cap(osl_t *osh);
 extern int dhdpcie_start_host_pcieclock(dhd_bus_t *bus);
 extern int dhdpcie_stop_host_pcieclock(dhd_bus_t *bus);
 extern int dhdpcie_disable_device(dhd_bus_t *bus);
@@ -217,9 +256,10 @@ extern int dhdpcie_oob_intr_register(dhd_bus_t *bus);
 extern void dhdpcie_oob_intr_unregister(dhd_bus_t *bus);
 extern void dhdpcie_oob_intr_set(dhd_bus_t *bus, bool enable);
 #endif /* BCMPCIE_OOB_HOST_WAKE */
+#ifdef PCIE_OOB
+extern void dhd_oob_set_bt_reg_on(struct dhd_bus *bus, bool val);
+extern int dhd_oob_get_bt_reg_on(struct dhd_bus *bus);
+#endif /* PCIE_OOB */
 
 extern int dhd_buzzz_dump_dngl(dhd_bus_t *bus);
-#if defined(CUSTOMER_HW4) || defined(CUSTOMER_HW10)
-void dhdpcie_l1ss_set(osl_t *osh);
-#endif /* CUSTOMER_HW4 */
 #endif /* dhd_pcie_h */

@@ -1,27 +1,31 @@
 /*
-* Customer code to add GPIO control during WLAN start/stop
-* Copyright (C) 1999-2015, Broadcom Corporation
-* 
-*      Unless you and Broadcom execute a separate written software license
-* agreement governing use of this software, this software is licensed to you
-* under the terms of the GNU General Public License version 2 (the "GPL"),
-* available at http://www.broadcom.com/licenses/GPLv2.php, with the
-* following added to such license:
-* 
-*      As a special exception, the copyright holders of this software give you
-* permission to link this software with independent modules, and to copy and
-* distribute the resulting executable under terms of your choice, provided that
-* you also meet, for each linked independent module, the terms and conditions of
-* the license of that module.  An independent module is a module which is not
-* derived from this software.  The special exception does not apply to any
-* modifications of the software.
-* 
-*      Notwithstanding the above, under no circumstances may you combine this
-* software in any way with any other Broadcom software provided under a license
-* other than the GPL, without Broadcom's express prior written consent.
-*
-* $Id: dhd_custom_gpio.c 493822 2014-07-29 13:20:26Z $
-*/
+ * Customer code to add GPIO control during WLAN start/stop
+ *
+ * Copyright (C) 1999-2016, Broadcom Corporation
+ * 
+ *      Unless you and Broadcom execute a separate written software license
+ * agreement governing use of this software, this software is licensed to you
+ * under the terms of the GNU General Public License version 2 (the "GPL"),
+ * available at http://www.broadcom.com/licenses/GPLv2.php, with the
+ * following added to such license:
+ * 
+ *      As a special exception, the copyright holders of this software give you
+ * permission to link this software with independent modules, and to copy and
+ * distribute the resulting executable under terms of your choice, provided that
+ * you also meet, for each linked independent module, the terms and conditions of
+ * the license of that module.  An independent module is a module which is not
+ * derived from this software.  The special exception does not apply to any
+ * modifications of the software.
+ * 
+ *      Notwithstanding the above, under no circumstances may you combine this
+ * software in any way with any other Broadcom software provided under a license
+ * other than the GPL, without Broadcom's express prior written consent.
+ *
+ *
+ * <<Broadcom-WL-IPTag/Open:>>
+ *
+ * $Id: dhd_custom_gpio.c 590770 2015-10-06 02:31:23Z $
+ */
 
 #include <typedefs.h>
 #include <linuxver.h>
@@ -32,7 +36,9 @@
 #include <dhd_linux.h>
 
 #include <wlioctl.h>
+#if defined(WL_WIRELESS_EXT)
 #include <wl_iw.h>
+#endif
 
 #define WL_ERROR(x) printf x
 #define WL_TRACE(x)
@@ -133,6 +139,14 @@ dhd_custom_get_mac_address(void *adapter, unsigned char *buf)
 #endif /* GET_CUSTOM_MAC_ENABLE */
 
 #if !defined(CUSTOMER_HW4)
+#if !defined(WL_WIRELESS_EXT)
+struct cntry_locales_custom {
+	char iso_abbrev[WLC_CNTRY_BUF_SZ];	/* ISO 3166-1 country abbreviation */
+	char custom_locale[WLC_CNTRY_BUF_SZ];	/* Custom firmware locale */
+	int32 custom_locale_rev;		/* Custom local revisin default -1 */
+};
+#endif /* WL_WIRELESS_EXT */
+
 /* Customized Locale table : OPTIONAL feature */
 const struct cntry_locales_custom translate_custom_table[] = {
 /* Table should be filled out based on custom platform regulatory requirement */
@@ -180,143 +194,6 @@ const struct cntry_locales_custom translate_custom_table[] = {
 	{"TR", "TR", 0},
 	{"NO", "NO", 0},
 #endif /* EXMAPLE_TABLE */
-
-#if defined(CUSTOMER_HW5)
-	{"",   "XZ", 11},
-	{"AE", "AE", 212},
-	{"AG", "AG", 2},
-	{"AI", "AI", 2},
-	{"AL", "AL", 2},
-	{"AN", "AN", 3},
-	{"AR", "AR", 212},
-	{"AS", "AS", 15},
-	{"AT", "AT", 4},
-	{"AU", "AU", 212},
-	{"AW", "AW", 2},
-	{"AZ", "AZ", 2},
-	{"BA", "BA", 2},
-	{"BD", "BD", 2},
-	{"BE", "BE", 4},
-	{"BG", "BG", 4},
-	{"BH", "BH", 4},
-	{"BM", "BM", 15},
-	{"BN", "BN", 4},
-	{"BR", "BR", 212},
-	{"BS", "BS", 2},
-	{"BY", "BY", 3},
-	{"BW", "BW", 1},
-	{"CA", "CA", 212},
-	{"CH", "CH", 212},
-	{"CL", "CL", 212},
-	{"CN", "CN", 212},
-	{"CO", "CO", 212},
-	{"CR", "CR", 21},
-	{"CY", "CY", 212},
-	{"CZ", "CZ", 212},
-	{"DE", "DE", 212},
-	{"DK", "DK", 4},
-	{"DZ", "DZ", 1},
-	{"EC", "EC", 23},
-	{"EE", "EE", 4},
-	{"EG", "EG", 212},
-	{"ES", "ES", 212},
-	{"ET", "ET", 2},
-	{"FI", "FI", 4},
-	{"FR", "FR", 212},
-	{"GB", "GB", 212},
-	{"GD", "GD", 2},
-	{"GF", "GF", 2},
-	{"GP", "GP", 2},
-	{"GR", "GR", 212},
-	{"GT", "GT", 0},
-	{"GU", "GU", 17},
-	{"HK", "HK", 212},
-	{"HR", "HR", 4},
-	{"HU", "HU", 4},
-	{"IN", "IN", 212},
-	{"ID", "ID", 212},
-	{"IE", "IE", 5},
-	{"IL", "IL", 7},
-	{"IN", "IN", 212},
-	{"IS", "IS", 4},
-	{"IT", "IT", 212},
-	{"JO", "JO", 3},
-	{"JP", "JP", 212},
-	{"KH", "KH", 4},
-	{"KI", "KI", 1},
-	{"KR", "KR", 212},
-	{"KW", "KW", 5},
-	{"KY", "KY", 4},
-	{"KZ", "KZ", 212},
-	{"LA", "LA", 4},
-	{"LB", "LB", 6},
-	{"LI", "LI", 4},
-	{"LK", "LK", 3},
-	{"LS", "LS", 2},
-	{"LT", "LT", 4},
-	{"LR", "LR", 2},
-	{"LU", "LU", 3},
-	{"LV", "LV", 4},
-	{"MA", "MA", 2},
-	{"MC", "MC", 1},
-	{"MD", "MD", 2},
-	{"ME", "ME", 2},
-	{"MK", "MK", 2},
-	{"MN", "MN", 0},
-	{"MO", "MO", 2},
-	{"MR", "MR", 2},
-	{"MT", "MT", 4},
-	{"MQ", "MQ", 2},
-	{"MU", "MU", 2},
-	{"MV", "MV", 3},
-	{"MX", "MX", 212},
-	{"MY", "MY", 212},
-	{"NI", "NI", 0},
-	{"NL", "NL", 212},
-	{"NO", "NO", 4},
-	{"NP", "NP", 3},
-	{"NZ", "NZ", 9},
-	{"OM", "OM", 4},
-	{"PA", "PA", 17},
-	{"PE", "PE", 212},
-	{"PG", "PG", 2},
-	{"PH", "PH", 212},
-	{"PL", "PL", 212},
-	{"PR", "PR", 25},
-	{"PT", "PT", 212},
-	{"PY", "PY", 4},
-	{"RE", "RE", 2},
-	{"RO", "RO", 212},
-	{"RS", "RS", 2},
-	{"RU", "RU", 212},
-	{"SA", "SA", 212},
-	{"SE", "SE", 212},
-	{"SG", "SG", 212},
-	{"SI", "SI", 4},
-	{"SK", "SK", 212},
-	{"SN", "SN", 2},
-	{"SV", "SV", 25},
-	{"TH", "TH", 212},
-	{"TR", "TR", 212},
-	{"TT", "TT", 5},
-	{"TW", "TW", 212},
-	{"UA", "UA", 212},
-	{"UG", "UG", 2},
-	{"US", "US", 212},
-	{"UY", "UY", 5},
-	{"VA", "VA", 2},
-	{"VE", "VE", 3},
-	{"VG", "VG", 2},
-	{"VI", "VI", 18},
-	{"VN", "VN", 4},
-	{"YT", "YT", 2},
-	{"ZA", "ZA", 212},
-	{"ZM", "ZM", 2},
-	{"XT", "XT", 212},
-	{"XZ", "XZ", 11},
-	{"XV", "XV", 17},
-	{"Q1", "Q1", 77},
-#endif 
 };
 
 
@@ -324,7 +201,12 @@ const struct cntry_locales_custom translate_custom_table[] = {
 *  input : ISO 3166-1 country abbreviation
 *  output: customized cspec
 */
+#ifdef CUSTOM_COUNTRY_CODE
+void get_customized_country_code(void *adapter, char *country_iso_code,
+  wl_country_t *cspec, u32 flags)
+#else
 void get_customized_country_code(void *adapter, char *country_iso_code, wl_country_t *cspec)
+#endif /* CUSTOM_COUNTRY_CODE */
 {
 	int size, i;
 

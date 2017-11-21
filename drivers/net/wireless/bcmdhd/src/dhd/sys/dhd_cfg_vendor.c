@@ -1,7 +1,7 @@
 /*
  * Linux cfg80211 vendor command/event handlers of DHD
  *
- * Copyright (C) 1999-2015, Broadcom Corporation
+ * Copyright (C) 1999-2016, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -21,9 +21,13 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: dhd_cfg_vendor.c 495605 2014-08-07 18:41:34Z $
+ *
+ * <<Broadcom-WL-IPTag/Open:>>
+ *
+ * $Id: dhd_cfg_vendor.c 525516 2015-01-09 23:12:53Z $
  */
 
+#include <linux/vmalloc.h>
 #include <linuxver.h>
 #include <net/cfg80211.h>
 #include <net/netlink.h>

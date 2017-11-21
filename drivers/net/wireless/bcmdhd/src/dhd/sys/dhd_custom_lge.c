@@ -1,6 +1,6 @@
 /*
 * Customer HW 10 dependant file
-* Copyright (C) 1999-2015, Broadcom Corporation
+* Copyright (C) 1999-2016, Broadcom Corporation
 * 
 *      Unless you and Broadcom execute a separate written software license
 * agreement governing use of this software, this software is licensed to you
@@ -32,6 +32,7 @@
 #include <dhd.h>
 #include <dhd_dbg.h>
 #include <dhd_linux.h>
+#include <bcmdevs.h>
 
 #if defined(DHD_TCP_WINSIZE_ADJUST)
 #include <linux/tcp.h>
@@ -45,7 +46,6 @@
 #endif /* SOFTAP_TPUT_ENHANCE */
 
 #include <dhd_custom_lge.h>
-
 
 #if defined(DHD_TCP_WINSIZE_ADJUST)
 #define MIN_TCP_WIN_SIZE 18000
@@ -64,7 +64,9 @@ int dhd_adjust_tcp_winsize(int index, int pk_type, int op_mode, struct sk_buff *
 extern int dhd_dscpmap_enable;
 #endif
 
-
+#if defined(OTP_WRITE_ON)
+#include <dhd_custom_lge_otpbinary.h>
+#endif /* OTP_WRITE_ON */
 struct cntry_locales_custom {
 	char iso_abbrev[WLC_CNTRY_BUF_SZ]; /* ISO 3166-1 country abbreviation */
 	char custom_locale[WLC_CNTRY_BUF_SZ]; /* Custom firmware locale */
@@ -330,7 +332,12 @@ const struct cntry_locales_custom translate_custom_table[] = {
 *  input : ISO 3166-1 country abbreviation
 *  output: customized cspec
 */
+#ifdef CUSTOM_COUNTRY_CODE
+void get_customized_country_code(void *adapter, char *country_iso_code,
+  wl_country_t *cspec, u32 flags)
+#else
 void get_customized_country_code(void *adapter, char *country_iso_code, wl_country_t *cspec)
+#endif /* CUSTOM_COUNTRY_CODE */
 {
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 39))
 
@@ -339,7 +346,11 @@ void get_customized_country_code(void *adapter, char *country_iso_code, wl_count
 	if (!cspec)
 		return;
 
+#ifdef CUSTOM_COUNTRY_CODE
+	cloc_ptr = wifi_platform_get_country_code(adapter, country_iso_code, flags);
+#else
 	cloc_ptr = wifi_platform_get_country_code(adapter, country_iso_code);
+#endif
 	if (cloc_ptr) {
 		strlcpy(cspec->ccode, cloc_ptr->custom_locale, WLC_CNTRY_BUF_SZ);
 		cspec->rev = cloc_ptr->custom_locale_rev;
@@ -367,6 +378,92 @@ void get_customized_country_code(void *adapter, char *country_iso_code, wl_count
 	return;
 #endif /* (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 39)) */
 }
+#if defined(BCM4359_CHIP)
+#define CIS_BUF_SIZE            1024
+#else
+#define CIS_BUF_SIZE            512
+#endif /* BCM4359_CHIP */
+
+#ifdef OTP_WRITE_ON
+#define htod32(i) (i)
+
+int dhd_write_otp(dhd_pub_t *dhd)
+{
+	int ret;
+	char buf[CIS_BUF_SIZE] = {0};
+	char *bufp;
+	const char *otp_vars;
+	int otp_header_size;
+	int otp_vars_size;
+	uint32 len = 0;
+	uint chipid;
+	cis_rw_t cish;
+	char *cisp, *cisdata;
+	int max = 0;
+	cis_rw_t *cish_r = (cis_rw_t *)&buf[8];
+
+	chipid = dhd_bus_chip_id(dhd);
+	DHD_INFO(("%s: chipid = 0x%x\n", __FUNCTION__, chipid));
+	if (chipid == BCM4358_CHIP_ID || chipid == BCM43569_CHIP_ID) {
+		otp_vars = BCM4358A3_otp_vars;
+		otp_vars_size = sizeof(BCM4358A3_otp_vars);
+		otp_header_size = BCM4358A3_OTP_HEADER_SIZE;
+	} else if (chipid == BCM43455_CHIP_ID || chipid == BCM4345_CHIP_ID) {
+		otp_vars = BCM43455C0_otp_vars;
+		otp_vars_size = sizeof(BCM43455C0_otp_vars);
+		otp_header_size = BCM43455C0_OTP_HEADER_SIZE;
+	} else {
+		DHD_ERROR(("%s: can't find OTP header for chip\n", __FUNCTION__));
+		return BCME_ERROR;
+	}
+
+	cish_r->source = 0;
+	cish_r->byteoff = 0;
+	cish_r->nbytes = sizeof(buf);
+
+	strcpy(buf, "cisdump");
+	ret = dhd_wl_ioctl_cmd(dhd, WLC_GET_VAR, buf, sizeof(buf), 0, 0);
+	if (ret < 0) {
+		DHD_ERROR(("[WIFI_LGE] %s: CIS reading failed, ret=%d\n",
+			__FUNCTION__, ret));
+		goto exit;
+	}
+	max = otp_header_size;
+	if (memcmp(&buf[12], otp_vars, otp_header_size) == 0) {
+		DHD_ERROR(("%s:OTP already was written\n", __FUNCTION__));
+	} else {
+		DHD_ERROR(("%s: OTP length: %d bytes \n", __FUNCTION__, otp_vars_size));
+
+		max = sizeof(buf);
+		bufp = buf;
+		memset(buf, 0, sizeof(buf));
+		strcpy(bufp, "ciswrite");
+		bufp += strlen("ciswrite") + 1;
+		cisp = bufp;
+		cisdata = cisp + sizeof(cish);
+
+		cish.source = htod32(0);
+
+		memcpy(cisdata, (char *)otp_vars, otp_vars_size);
+		len = otp_vars_size;
+
+		cish.byteoff = htod32(0);
+		cish.nbytes = htod32(len);
+		memcpy(cisp, (char*)&cish, sizeof(cish));
+
+		ret = dhd_wl_ioctl_cmd(dhd, WLC_SET_VAR, buf,
+			(cisp - buf) + sizeof(cish) + len, TRUE, 0);
+		if (ret) {
+			DHD_ERROR(("%s: Fail to write otp, ret = %d \n", __FUNCTION__, ret));
+		} else {
+			DHD_ERROR(("Success to write otp \n"));
+		}
+	}
+	/* check or create .otp.info */
+exit:
+	return ret;
+}
+#endif /* OTP_WRITE_ON */
 
 #ifdef CONFIG_CONTROL_PM
 void dhd_control_pm(dhd_pub_t *dhd, uint *power_mode)
@@ -456,9 +553,8 @@ int set_softap_params(dhd_pub_t *dhd)
 		iovar_set = 5;
 		bcm_mkiovar("ampdu_rr_retry_limit", (char *)&iovar_set, 4, iov_buf,
 		 sizeof(iov_buf));
-		dhd_wl_ioctl_cmd(dhd, WLC_SET_VAR, iov_buf, sizeof(iov_buf), TRUE, 0);	
+		dhd_wl_ioctl_cmd(dhd, WLC_SET_VAR, iov_buf, sizeof(iov_buf), TRUE, 0);
 
-#if defined(BCM43455_CHIP) || defined(BCM4339_CHIP)
 		iovar_set = 13;
 		if ((ret = dhd_wl_ioctl_cmd(dhd, WLC_SET_SRL, (char *)&iovar_set,
 			sizeof(iovar_set), TRUE, 0)) < 0) {
@@ -470,13 +566,12 @@ int set_softap_params(dhd_pub_t *dhd)
 			sizeof(iovar_set), TRUE, 0)) < 0) {
 			DHD_ERROR(("%s Set LRL failed  %d\n", __FUNCTION__, ret));
 		}
-
-		iovar_set = 0;
+// Update frameburst to 1 to meet SoftAP T.P requirement for BELL operator, BRCM Case 1112892
+		iovar_set = 1;
 		if ((ret = dhd_wl_ioctl_cmd(dhd, WLC_SET_FAKEFRAG, (char *)&iovar_set,
 			sizeof(iovar_set), TRUE, 0)) < 0) {
 			DHD_ERROR(("%s Set frameburst failed  %d\n", __FUNCTION__, ret));
 		}
-#endif  /* defined(BCM43455_CHIP) || defined(BCM4339_CHIP) */
 
 #ifdef BCM4334_CHIP
 		iovar_set = 0;
