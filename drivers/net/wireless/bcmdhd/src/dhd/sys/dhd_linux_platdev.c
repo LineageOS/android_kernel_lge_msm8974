@@ -1,7 +1,7 @@
 /*
  * Linux platform device for DHD WLAN adapter
  *
- * Copyright (C) 1999-2015, Broadcom Corporation
+ * Copyright (C) 1999-2016, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -20,6 +20,9 @@
  *      Notwithstanding the above, under no circumstances may you combine this
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
+ *
+ *
+ * <<Broadcom-WL-IPTag/Open:>>
  *
  * $Id: dhd_linux_platdev.c 401742 2013-05-13 15:03:21Z $
  */
@@ -44,16 +47,6 @@
 #include<linux/of_gpio.h>
 #endif /* CONFIG_DTS */
 
-#if !defined(CONFIG_WIFI_CONTROL_FUNC)
-struct wifi_platform_data {
-	int (*set_power)(int val);
-	int (*set_reset)(int val);
-	int (*set_carddetect)(int val);
-	void *(*mem_prealloc)(int section, unsigned long size);
-	int (*get_mac_addr)(unsigned char *buf);
-	void *(*get_country_code)(char *ccode);
-};
-#endif /* CONFIG_WIFI_CONTROL_FUNC */
 
 #define WIFI_PLAT_NAME		"bcmdhd_wlan"
 #define WIFI_PLAT_NAME2		"bcm4329_wlan"
@@ -231,8 +224,11 @@ int wifi_platform_get_mac_addr(wifi_adapter_info_t *adapter, unsigned char *buf)
 	}
 	return -EOPNOTSUPP;
 }
-
+#ifdef CUSTOM_COUNTRY_CODE
+void *wifi_platform_get_country_code(wifi_adapter_info_t *adapter, char *ccode, u32 flags)
+#else
 void *wifi_platform_get_country_code(wifi_adapter_info_t *adapter, char *ccode)
+#endif /* CUSTOM_COUNTRY_CODE */
 {
 	/* get_country_code was added after 2.6.39 */
 #if	(LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 39))
@@ -244,7 +240,19 @@ void *wifi_platform_get_country_code(wifi_adapter_info_t *adapter, char *ccode)
 
 	DHD_TRACE(("%s\n", __FUNCTION__));
 	if (plat_data->get_country_code) {
+#if     (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 58))
+#if defined(CUSTOM_COUNTRY_CODE)
+		return plat_data->get_country_code(ccode, flags);
+#else
+		return plat_data->get_country_code(ccode, WLAN_PLAT_NODFS_FLAG);
+#endif /* CUSTOM_COUNTRY_CODE */
+#else
+#ifdef CUSTOM_COUNTRY_CODE
+		return plat_data->get_country_code(ccode, flags);
+#else
 		return plat_data->get_country_code(ccode);
+#endif /* CUSTOM_COUNTRY_CODE */
+#endif /* (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 58)) */
 	}
 #endif /* (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 39)) */
 
@@ -416,6 +424,10 @@ static int wifi_ctrlfunc_register_drv(void)
 	 * DHD (either SDIO, USB or PCIe)
 	 */
 	adapter = kzalloc(sizeof(wifi_adapter_info_t), GFP_KERNEL);
+	if (adapter == NULL) {
+		DHD_ERROR(("%s:adapter alloc failed", __FUNCTION__));
+		return ENOMEM;
+	}
 	adapter->name = "DHD generic adapter";
 	adapter->bus_type = -1;
 	adapter->bus_num = -1;

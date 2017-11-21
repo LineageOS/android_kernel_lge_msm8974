@@ -2,7 +2,7 @@
  * Common stats definitions for clients of dongle
  * ports
  *
- * Copyright (C) 1999-2015, Broadcom Corporation
+ * Copyright (C) 1999-2016, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -22,11 +22,17 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: dngl_stats.h 514524 2014-11-11 08:25:09Z $
+ *
+ * <<Broadcom-WL-IPTag/Open:>>
+ *
+ * $Id: dngl_stats.h 641342 2016-06-02 08:28:42Z $
  */
 
 #ifndef _dngl_stats_h_
 #define _dngl_stats_h_
+
+#include <proto/ethernet.h>
+#include <proto/802.11.h>
 
 typedef struct {
 	unsigned long	rx_packets;		/* total packets received */
@@ -80,22 +86,28 @@ typedef enum {
 } wifi_interface_mode;
 
 #define WIFI_CAPABILITY_QOS          0x00000001     /* set for QOS association */
-#define WIFI_CAPABILITY_PROTECTED    0x00000002     /* set for protected association (802.11 beacon frame control protected bit set) */
-#define WIFI_CAPABILITY_INTERWORKING 0x00000004     /* set if 802.11 Extended Capabilities element interworking bit is set */
+#define WIFI_CAPABILITY_PROTECTED    0x00000002     /* set for protected association (802.11
+						     * beacon frame control protected bit set)
+						     */
+#define WIFI_CAPABILITY_INTERWORKING 0x00000004     /* set if 802.11 Extended Capabilities
+						     * element interworking bit is set
+						     */
 #define WIFI_CAPABILITY_HS20         0x00000008     /* set for HS20 association */
-#define WIFI_CAPABILITY_SSID_UTF8    0x00000010     /* set is 802.11 Extended Capabilities element UTF-8 SSID bit is set */
+#define WIFI_CAPABILITY_SSID_UTF8    0x00000010     /* set is 802.11 Extended Capabilities
+						     * element UTF-8 SSID bit is set
+						     */
 #define WIFI_CAPABILITY_COUNTRY      0x00000020     /* set is 802.11 Country Element is present */
 
 typedef struct {
 	wifi_interface_mode mode;     /* interface mode */
-	u8 mac_addr[6];               /* interface mac address (self) */
+	uint8 mac_addr[6];               /* interface mac address (self) */
 	wifi_connection_state state;  /* connection state (valid for STA, CLI only) */
 	wifi_roam_state roaming;      /* roaming state */
-	u32 capabilities;             /* WIFI_CAPABILITY_XXX (self) */
-	u8 ssid[33];                  /* null terminated SSID */
-	u8 bssid[6];                  /* bssid */
-	u8 ap_country_str[3];         /* country string advertised by AP */
-	u8 country_str[3];            /* country string for this association */
+	uint32 capabilities;             /* WIFI_CAPABILITY_XXX (self) */
+	uint8 ssid[DOT11_MAX_SSID_LEN+1]; /* null terminated SSID */
+	uint8 bssid[ETHER_ADDR_LEN];     /* bssid */
+	uint8 ap_country_str[3];         /* country string advertised by AP */
+	uint8 country_str[3];            /* country string for this association */
 } wifi_interface_info;
 
 typedef wifi_interface_info *wifi_interface_handle;
@@ -110,48 +122,72 @@ typedef struct {
 
 /* wifi rate */
 typedef struct {
-	u32 preamble   :3;   /* 0: OFDM, 1:CCK, 2:HT 3:VHT 4..7 reserved */
-	u32 nss        :2;   /* 0:1x1, 1:2x2, 3:3x3, 4:4x4 */
-	u32 bw         :3;   /* 0:20MHz, 1:40Mhz, 2:80Mhz, 3:160Mhz */
-	u32 rateMcsIdx :8;   /* OFDM/CCK rate code would be as per ieee std in the units of 0.5mbps */
-	/* HT/VHT it would be mcs index */
-	u32 reserved  :16;   /* reserved */
-	u32 bitrate;         /* units of 100 Kbps */
+	uint32 preamble   :3;   /* 0: OFDM, 1:CCK, 2:HT 3:VHT 4..7 reserved */
+	uint32 nss        :2;   /* 0:1x1, 1:2x2, 3:3x3, 4:4x4 */
+	uint32 bw         :3;   /* 0:20MHz, 1:40Mhz, 2:80Mhz, 3:160Mhz */
+	uint32 rateMcsIdx :8;   /* OFDM/CCK rate code would be as per ieee std
+				 * in the units of 0.5mbps HT/VHT it would be mcs index
+				 */
+	uint32 reserved  :16;   /* reserved */
+	uint32 bitrate;         /* units of 100 Kbps */
 } wifi_rate;
 
 /* channel statistics */
 typedef struct {
 	wifi_channel_info channel;  /* channel */
-	u32 on_time;                /* msecs the radio is awake (32 bits number accruing over time) */
-	u32 cca_busy_time;          /* msecs the CCA register is busy (32 bits number accruing over time) */
+	uint32 on_time;		/* msecs the radio is awake (32 bits number
+				 * accruing over time)
+				 */
+	uint32 cca_busy_time;	/* msecs the CCA register is busy (32 bits number
+				 * accruing over time)
+				 */
 } wifi_channel_stat;
 
 /* radio statistics */
 typedef struct {
 	wifi_radio radio;               /* wifi radio (if multiple radio supported) */
-	u32 on_time;                    /* msecs the radio is awake (32 bits number accruing over time) */
-	u32 tx_time;                    /* msecs the radio is transmitting (32 bits number accruing over time) */
-	u32 rx_time;                    /* msecs the radio is in active receive (32 bits number accruing over time) */
-	u32 on_time_scan;               /* msecs the radio is awake due to all scan (32 bits number accruing over time) */
-	u32 on_time_nbd;                /* msecs the radio is awake due to NAN (32 bits number accruing over time) */
-	u32 on_time_gscan;              /* msecs the radio is awake due to G?scan (32 bits number accruing over time) */
-	u32 on_time_roam_scan;          /* msecs the radio is awake due to roam?scan (32 bits number accruing over time) */
-	u32 on_time_pno_scan;           /* msecs the radio is awake due to PNO scan (32 bits number accruing over time) */
-	u32 on_time_hs20;               /* msecs the radio is awake due to HS2.0 scans and GAS exchange (32 bits number accruing over time) */
-	u32 num_channels;               /* number of channels */
+	uint32 on_time;                    /* msecs the radio is awake (32 bits number
+					    * accruing over time)
+					    */
+	uint32 tx_time;                    /* msecs the radio is transmitting (32 bits
+					    * number accruing over time)
+					    */
+	uint32 rx_time;                    /* msecs the radio is in active receive (32 bits
+					    * number accruing over time)
+					    */
+	uint32 on_time_scan;               /* msecs the radio is awake due to all scan (32 bits
+					    * number accruing over time)
+					    */
+	uint32 on_time_nbd;                /* msecs the radio is awake due to NAN (32 bits
+					    * number accruing over time)
+					    */
+	uint32 on_time_gscan;              /* msecs the radio is awake due to G?scan (32 bits
+					    * number accruing over time)
+					    */
+	uint32 on_time_roam_scan;          /* msecs the radio is awake due to roam?scan (32 bits
+					    * number accruing over time)
+					    */
+	uint32 on_time_pno_scan;           /* msecs the radio is awake due to PNO scan (32 bits
+					    * number accruing over time)
+					    */
+	uint32 on_time_hs20;               /* msecs the radio is awake due to HS2.0 scans and
+					    * GAS exchange (32 bits number accruing over time)
+					    */
+	uint32 num_channels;               /* number of channels */
 	wifi_channel_stat channels[];   /* channel statistics */
 } wifi_radio_stat;
 
 /* per rate statistics */
 typedef struct {
-	wifi_rate rate;     /* rate information */
-	u32 tx_mpdu;        /* number of successfully transmitted data pkts (ACK rcvd) */
-	u32 rx_mpdu;        /* number of received data pkts */
-	u32 mpdu_lost;      /* number of data packet losses (no ACK) */
-	u32 retries;        /* total number of data pkt retries */
-	u32 retries_short;  /* number of short data pkt retries */
-	u32 retries_long;   /* number of long data pkt retries */
+	wifi_rate rate;
+	uint32 tx_mpdu;
+	uint32 rx_mpdu;
+	uint32 mpdu_lost;
+	uint32 retries;
+	uint32 retries_short;
+	uint32 retries_long;
 } wifi_rate_stat;
+
 
 /* access categories */
 typedef enum {
@@ -177,45 +213,78 @@ typedef enum
 /* per peer statistics */
 typedef struct {
 	wifi_peer_type type;           /* peer type (AP, TDLS, GO etc.) */
-	u8 peer_mac_address[6];        /* mac address */
-	u32 capabilities;              /* peer WIFI_CAPABILITY_XXX */
-	u32 num_rate;                  /* number of rates */
-	wifi_rate_stat rate_stats[];   /* per rate statistics, number of entries  = num_rate */
+	uint8 peer_mac_address[6];        /* mac address */
+	uint32 capabilities;              /* peer WIFI_CAPABILITY_XXX */
+	uint32 num_rate;                  /* number of rates */
+	wifi_rate_stat rate_stats[1];   /* per rate statistics, number of entries  = num_rate */
 } wifi_peer_info;
 
 /* per access category statistics */
 typedef struct {
 	wifi_traffic_ac ac;             /* access category (VI, VO, BE, BK) */
-	u32 tx_mpdu;                    /* number of successfully transmitted unicast data pkts (ACK rcvd) */
-	u32 rx_mpdu;                    /* number of received unicast mpdus */
-	u32 tx_mcast;                   /* number of succesfully transmitted multicast data packets */
-	/* STA case: implies ACK received from AP for the unicast packet in which mcast pkt was sent */
-	u32 rx_mcast;                   /* number of received multicast data packets */
-	u32 rx_ampdu;                   /* number of received unicast a-mpdus */
-	u32 tx_ampdu;                   /* number of transmitted unicast a-mpdus */
-	u32 mpdu_lost;                  /* number of data pkt losses (no ACK) */
-	u32 retries;                    /* total number of data pkt retries */
-	u32 retries_short;              /* number of short data pkt retries */
-	u32 retries_long;               /* number of long data pkt retries */
-	u32 contention_time_min;        /* data pkt min contention time (usecs) */
-	u32 contention_time_max;        /* data pkt max contention time (usecs) */
-	u32 contention_time_avg;        /* data pkt avg contention time (usecs) */
-	u32 contention_num_samples;     /* num of data pkts used for contention statistics */
+	uint32 tx_mpdu;                    /* number of successfully transmitted unicast data pkts
+					    * (ACK rcvd)
+					    */
+	uint32 rx_mpdu;                    /* number of received unicast mpdus */
+	uint32 tx_mcast;                   /* number of succesfully transmitted multicast
+					    * data packets
+					    */
+					   /* STA case: implies ACK received from AP for the
+					    * unicast packet in which mcast pkt was sent
+					    */
+	uint32 rx_mcast;                   /* number of received multicast data packets */
+	uint32 rx_ampdu;                   /* number of received unicast a-mpdus */
+	uint32 tx_ampdu;                   /* number of transmitted unicast a-mpdus */
+	uint32 mpdu_lost;                  /* number of data pkt losses (no ACK) */
+	uint32 retries;                    /* total number of data pkt retries */
+	uint32 retries_short;              /* number of short data pkt retries */
+	uint32 retries_long;               /* number of long data pkt retries */
+	uint32 contention_time_min;        /* data pkt min contention time (usecs) */
+	uint32 contention_time_max;        /* data pkt max contention time (usecs) */
+	uint32 contention_time_avg;        /* data pkt avg contention time (usecs) */
+	uint32 contention_num_samples;     /* num of data pkts used for contention statistics */
 } wifi_wmm_ac_stat;
 
 /* interface statistics */
 typedef struct {
 	wifi_interface_handle iface;          /* wifi interface */
 	wifi_interface_info info;             /* current state of the interface */
-	u32 beacon_rx;                        /* access point beacon received count from connected AP */
-	u32 mgmt_rx;                          /* access point mgmt frames received count from connected AP (including Beacon) */
-	u32 mgmt_action_rx;                   /* action frames received count */
-	u32 mgmt_action_tx;                   /* action frames transmit count */
-	wifi_rssi rssi_mgmt;                  /* access Point Beacon and Management frames RSSI (averaged) */
-	wifi_rssi rssi_data;                  /* access Point Data Frames RSSI (averaged) from connected AP */
-	wifi_rssi rssi_ack;                   /* access Point ACK RSSI (averaged) from connected AP */
+	uint32 beacon_rx;                     /* access point beacon received count from
+					       * connected AP
+					       */
+	uint64 average_tsf_offset;	/* average beacon offset encountered (beacon_TSF - TBTT)
+					 * The average_tsf_offset field is used so as to calculate
+					 * the typical beacon contention time on the channel as well
+					 * may be used to debug beacon synchronization and related
+					 * power consumption issue
+					 */
+	uint32 leaky_ap_detected;	/* indicate that this AP typically leaks packets beyond
+					 * the driver guard time.
+					 */
+	uint32 leaky_ap_avg_num_frames_leaked;	/* average number of frame leaked by AP after
+						 * frame with PM bit set was ACK'ed by AP
+						 */
+	uint32 leaky_ap_guard_time;	/* guard time currently in force (when implementing IEEE
+					 * power management based on frame control PM bit), How long
+					 * driver waits before shutting down the radio and after
+					 * receiving an ACK for a data frame with PM bit set)
+					 */
+	uint32 mgmt_rx;                       /* access point mgmt frames received count from
+					       * connected AP (including Beacon)
+					       */
+	uint32 mgmt_action_rx;                /* action frames received count */
+	uint32 mgmt_action_tx;                /* action frames transmit count */
+	wifi_rssi rssi_mgmt;                  /* access Point Beacon and Management frames RSSI
+					       * (averaged)
+					       */
+	wifi_rssi rssi_data;                  /* access Point Data Frames RSSI (averaged) from
+					       * connected AP
+					       */
+	wifi_rssi rssi_ack;                   /* access Point ACK RSSI (averaged) from
+					       * connected AP
+					       */
 	wifi_wmm_ac_stat ac[WIFI_AC_MAX];     /* per ac data packet statistics */
-	u32 num_peers;                        /* number of peers */
+	uint32 num_peers;                        /* number of peers */
 	wifi_peer_info peer_info[];           /* per peer statistics */
 } wifi_iface_stat;
 

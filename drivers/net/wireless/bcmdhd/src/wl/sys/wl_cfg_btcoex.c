@@ -1,7 +1,7 @@
 /*
  * Linux cfg80211 driver - Dongle Host Driver (DHD) related
  *
- * Copyright (C) 1999-2015, Broadcom Corporation
+ * Copyright (C) 1999-2016, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -21,7 +21,10 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: wl_cfg_btcoex.c 467328 2014-04-03 01:23:40Z $
+ *
+ * <<Broadcom-WL-IPTag/Open:>>
+ *
+ * $Id: wl_cfg_btcoex.c 640100 2016-05-26 05:20:30Z $
  */
 
 #include <net/rtnetlink.h>
@@ -64,7 +67,9 @@ static struct btcoex_info *btcoex_info_loc = NULL;
 /* this flag boost wifi pkt priority to max, caution: -not fair to sco */
 #define BT_DHCP_USE_FLAGS
 /* T1 start SCO/ESCo priority suppression */
+#ifndef BT_DHCP_OPPR_WIN_TIME
 #define BT_DHCP_OPPR_WIN_TIME	2500
+#endif
 /* T2 turn off SCO/SCO supperesion is (timeout) */
 #define BT_DHCP_FLAG_FORCE_TIME 5500
 
@@ -100,11 +105,7 @@ dev_wlc_intvar_get_reg(struct net_device *dev, char *name,
 static int
 dev_wlc_bufvar_set(struct net_device *dev, char *name, char *buf, int len)
 {
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 31)
-	char ioctlbuf_local[1024];
-#else
-	static char ioctlbuf_local[1024];
-#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 31) */
+	char ioctlbuf_local[WLC_IOCTL_SMLEN];
 
 	bcm_mkiovar(name, buf, len, ioctlbuf_local, sizeof(ioctlbuf_local));
 
@@ -413,6 +414,81 @@ void wl_cfg80211_btcoex_deinit()
 
 	kfree(btcoex_info_loc);
 }
+
+#ifdef CUSTOMER_HW10
+int wl_cfg80211_set_btcoex_allow_bt_inquiry(struct net_device *dev, char *command, bool enabled)
+{
+	#define  BTCX_BT_TASK_INQUIRY_BIT 9
+	static uint32 saved_reg50, modified_reg50;
+	static bool saved_status = FALSE;
+	int ret;
+	uint32 regaddr = 50;
+
+	if (enabled) {
+		if (saved_status && saved_reg50) {
+			WL_TRACE(("%s recovery btc_params50 = 0x%x\n", __FUNCTION__, saved_reg50));
+			ret = dev_wlc_intvar_set_reg(dev, "btc_params",
+				(char *)&regaddr, (char *)&saved_reg50);
+			saved_status = FALSE;
+		} else {
+			WL_TRACE(("%s recovery saved_reg50 = 0x%x  saved_status =%d\n",
+				__FUNCTION__, saved_reg50, saved_status));
+		}
+	} else {
+		ret = dev_wlc_intvar_get_reg(dev, "btc_params", 50,  &modified_reg50);
+		saved_reg50 = modified_reg50;
+		modified_reg50 &= ~(0x1 << (BTCX_BT_TASK_INQUIRY_BIT));
+		ret = dev_wlc_intvar_set_reg(dev, "btc_params",
+			(char *)&regaddr, (char *)&modified_reg50);
+		if (!ret) {
+			saved_status = TRUE;
+		}
+	}
+
+	snprintf(command, 3, "OK");
+
+	return (ret == 0) ? strlen("OK") : strlen("FAILED");
+
+}
+
+int wl_cfg80211_set_btcoex_bt_preference(struct net_device *dev, char *command, bool enabled)
+{
+#define WLAN_PREFER 0
+#define BT_PREFER 1
+
+	int ret = 0;
+	static const uint32 btc_params_preference[2][2] = {{45000, 5}, {25000, 4}};
+	/* btc_params8 and btc_params33 */
+	uint32 reg8, reg33, regaddr;
+
+	dev_wlc_intvar_get_reg(dev, "btc_params", 8,  &reg8);
+	dev_wlc_intvar_get_reg(dev, "btc_params", 33,  &reg33);
+
+	if (enabled && reg8 == btc_params_preference[BT_PREFER][0] &&
+		reg33 == btc_params_preference[BT_PREFER][1]) {
+		WL_TRACE(("btc param has bt preference already \n"));
+	} else if (!enabled && reg8 == btc_params_preference[WLAN_PREFER][0] &&
+		reg33 == btc_params_preference[WLAN_PREFER][1]) {
+		WL_TRACE(("btc param has wlan preference already \n"));
+	} else {
+		WL_TRACE(("btc param has been set to %s preference \n", enabled ? "BT" : "WLAN"));
+		regaddr = 8;
+		ret = dev_wlc_intvar_set_reg(dev, "btc_params",
+			(char *)&regaddr, (char *)&btc_params_preference[enabled][0]);
+		regaddr = 33;
+		ret = dev_wlc_intvar_set_reg(dev, "btc_params",
+			(char *)&regaddr, (char *)&btc_params_preference[enabled][1]);
+		if (!ret) {
+			WL_TRACE(("%s set failed ret =%d\n", __FUNCTION__, ret));
+		}
+	}
+
+	snprintf(command, 3, "OK");
+
+	return strlen("OK");
+
+}
+#endif /* CUSTOMER_HW10 */
 
 int wl_cfg80211_set_btcoex_dhcp(struct net_device *dev, dhd_pub_t *dhd, char *command)
 {

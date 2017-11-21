@@ -1,7 +1,7 @@
 /*
- * Initialization and support routines for self-booting compressed image.
+ * PCIe full dongle related circular buffer definition, only used by PHANTOM PCIe chip types.
  *
- * Copyright (C) 1999-2015, Broadcom Corporation
+ * Copyright (C) 1999-2016, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -21,7 +21,10 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: circularbuf.h 452258 2014-01-29 19:17:57Z $
+ *
+ * <<Broadcom-WL-IPTag/Open:>>
+ *
+ * $Id: circularbuf.h 530150 2015-01-29 08:43:40Z $
  */
 
 #ifndef __CIRCULARBUF_H_INCLUDED__
@@ -37,7 +40,7 @@ typedef enum {
 	CIRCULARBUF_SUCCESS
 } circularbuf_ret_t;
 
-/* Core circularbuf circular buffer structure */
+/** A circular buffer always resides in host memory. Core circularbuf circular buffer structure. */
 typedef struct circularbuf_s
 {
 	uint16 depth;	/* Depth of circular buffer */
@@ -47,7 +50,7 @@ typedef struct circularbuf_s
 	uint16 wp_ptr;	/* wp_ptr/pending - scheduled for DMA. But, not yet complete. */
 	uint16 rp_ptr;	/* rp_ptr/pending - scheduled for DMA. But, not yet complete. */
 
-	uint8  *buf_addr;
+	uint8  *buf_addr; /* pointer into host memory */
 	void  *mb_ctx;
 	void  (*mb_ring_bell)(void *ctx);
 } circularbuf_t;
@@ -76,12 +79,16 @@ extern int cbuf_msg_level;
 					(int) (handle)->e_ptr));
 
 
-/* Callback registered by application/mail-box with the circularbuf implementation.
+/**
+ * Callback registered by application/mail-box with the circularbuf implementation.
  * This will be invoked by the circularbuf implementation when write is complete and
  * ready for informing the peer
  */
 typedef void (*mb_ring_t)(void *ctx);
 
+/*
+ * These circularbuf_* functions are only referenced by firmware for phantom devices (pcie_phtm.c).
+ */
 
 /* Public Functions exposed by circularbuf */
 void
@@ -101,7 +108,7 @@ circularbuf_get_read_ptr(circularbuf_t *handle, uint16 *avail_len);
 circularbuf_ret_t
 circularbuf_read_complete(circularbuf_t *handle, uint16 bytes_read);
 
-/*
+/**
  * circularbuf_get_read_ptr() updates rp_ptr by the amount that the consumer
  * is supposed to read. The consumer may not read the entire amount.
  * In such a case, circularbuf_revert_rp_ptr() call follows a corresponding

@@ -1,13 +1,14 @@
 /*
- * Header file of Broadcom Dongle Host Driver (DHD)
- * Copyright (C) 1999-2014, Broadcom Corporation
+ * Broadcom Dongle Host Driver (DHD), RTT
  *
+ * Copyright (C) 1999-2016, Broadcom Corporation
+ * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
  * under the terms of the GNU General Public License version 2 (the "GPL"),
  * available at http://www.broadcom.com/licenses/GPLv2.php, with the
  * following added to such license:
- *
+ * 
  *      As a special exception, the copyright holders of this software give you
  * permission to link this software with independent modules, and to copy and
  * distribute the resulting executable under terms of your choice, provided that
@@ -15,23 +16,23 @@
  * the license of that module.  An independent module is a module which is not
  * derived from this software.  The special exception does not apply to any
  * modifications of the software.
- *
+ * 
  *      Notwithstanding the above, under no circumstances may you combine this
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: dhd_rtt.h 423669 2014-07-01 13:01:56Z $
+ * $Id: dhd_rtt.h 558438 2015-05-22 06:05:11Z $
  */
 #ifndef __DHD_RTT_H__
 #define __DHD_RTT_H__
 
 #include "dngl_stats.h"
 
-#define RTT_MAX_TARGET_CNT 10
-#define RTT_MAX_FRAME_CNT 25
-#define RTT_MAX_RETRY_CNT 10
-#define DEFAULT_FTM_CNT 6
-#define DEFAULT_RETRY_CNT 6
+#define RTT_MAX_TARGET_CNT	10
+#define RTT_MAX_FRAME_CNT	25
+#define RTT_MAX_RETRY_CNT	10
+#define DEFAULT_FTM_CNT		6
+#define DEFAULT_RETRY_CNT	6
 
 
 /* DSSS, CCK and 802.11n rates in [500kbps] units */
@@ -60,6 +61,7 @@ enum rtt_status {
 };
 typedef int64_t wifi_timestamp; /* In microseconds (us) */
 typedef int64_t wifi_timespan;
+typedef int wifi_rssi;
 
 typedef enum {
 	RTT_INVALID,
@@ -112,7 +114,7 @@ typedef struct wifi_rate {
 	*/
 	uint32 rateMcsIdx :8;
 	uint32 reserved :16; /* reserved */
-	uint32 bitrate; /* unit of 100 Kbps */
+	uint32 bitrate;	/* unit of 100 Kbps */
 } wifi_rate_t;
 
 typedef struct rtt_target_info {
@@ -166,16 +168,16 @@ typedef struct rtt_report {
 	wifi_timespan rtt_spread; /* difference between max and min rtt times recorded */
 	int32 distance; /* distance in cm (optional) */
 	int32 distance_sd; /* standard deviation in cm (optional) */
-	int32 distance_spread;	/* difference between max and min distance recorded (optional) */
+	int32 distance_spread; /* difference between max and min distance recorded (optional) */
 	wifi_timestamp ts; /* time of the measurement (in microseconds since boot) */
 } rtt_report_t;
 
 /* RTT Capabilities */
 typedef struct rtt_capabilities {
-	uint8 rtt_one_sided_supported;	/* if 1-sided rtt data collection is supported */
-	uint8 rtt_11v_supported;		/* if 11v rtt data collection is supported */
-	uint8 rtt_ftm_supported;	/* if ftm rtt data collection is supported */
-	uint8 rtt_vs_supported;		/* if vendor specific data collection is supported */
+	uint8 rtt_one_sided_supported;  /* if 1-sided rtt data collection is supported */
+	uint8 rtt_11v_supported;        /* if 11v rtt data collection is supported */
+	uint8 rtt_ftm_supported;        /* if ftm rtt data collection is supported */
+	uint8 rtt_vs_supported;		/* if vendor specific data collection supported */
 } rtt_capabilities_t;
 
 typedef struct rtt_config_params {
@@ -185,33 +187,48 @@ typedef struct rtt_config_params {
 
 typedef void (*dhd_rtt_compl_noti_fn)(void *ctx, void *rtt_data);
 /* Linux wrapper to call common dhd_rtt_set_cfg */
-int dhd_dev_rtt_set_cfg(struct net_device *dev, void *buf);
+int
+dhd_dev_rtt_set_cfg(struct net_device *dev, void *buf);
 
-int dhd_dev_rtt_cancel_cfg(struct net_device *dev, struct ether_addr *mac_list, int mac_cnt);
+int
+dhd_dev_rtt_cancel_cfg(struct net_device *dev, struct ether_addr *mac_list, int mac_cnt);
 
-int dhd_dev_rtt_register_noti_callback(struct net_device *dev,
-	void *ctx, dhd_rtt_compl_noti_fn noti_fn);
+int
+dhd_dev_rtt_register_noti_callback(struct net_device *dev, void *ctx,
+	dhd_rtt_compl_noti_fn noti_fn);
 
-int dhd_dev_rtt_unregister_noti_callback(struct net_device *dev, dhd_rtt_compl_noti_fn noti_fn);
+int
+dhd_dev_rtt_unregister_noti_callback(struct net_device *dev, dhd_rtt_compl_noti_fn noti_fn);
 
-int dhd_dev_rtt_capability(struct net_device *dev, rtt_capabilities_t *capa);
+int
+dhd_dev_rtt_capability(struct net_device *dev, rtt_capabilities_t *capa);
 
 /* export to upper layer */
-chanspec_t dhd_rtt_convert_to_chspec(wifi_channel_info_t channel);
+chanspec_t
+dhd_rtt_convert_to_chspec(wifi_channel_info_t channel);
 
-int dhd_rtt_set_cfg(dhd_pub_t *dhd, rtt_config_params_t *params);
+int
+dhd_rtt_set_cfg(dhd_pub_t *dhd, rtt_config_params_t *params);
 
-int dhd_rtt_stop(dhd_pub_t *dhd, struct ether_addr *mac_list, int mac_cnt);
+int
+dhd_rtt_stop(dhd_pub_t *dhd, struct ether_addr *mac_list, int mac_cnt);
 
-int dhd_rtt_register_noti_callback(dhd_pub_t *dhd, void *ctx, dhd_rtt_compl_noti_fn noti_fn);
 
-int dhd_rtt_unregister_noti_callback(dhd_pub_t *dhd, dhd_rtt_compl_noti_fn noti_fn);
+int
+dhd_rtt_register_noti_callback(dhd_pub_t *dhd, void *ctx, dhd_rtt_compl_noti_fn noti_fn);
 
-int dhd_rtt_event_handler(dhd_pub_t *dhd, wl_event_msg_t *event, void *event_data);
+int
+dhd_rtt_unregister_noti_callback(dhd_pub_t *dhd, dhd_rtt_compl_noti_fn noti_fn);
 
-int dhd_rtt_capability(dhd_pub_t *dhd, rtt_capabilities_t *capa);
+int
+dhd_rtt_event_handler(dhd_pub_t *dhd, wl_event_msg_t *event, void *event_data);
 
-int dhd_rtt_init(dhd_pub_t *dhd);
+int
+dhd_rtt_capability(dhd_pub_t *dhd, rtt_capabilities_t *capa);
 
-int dhd_rtt_deinit(dhd_pub_t *dhd);
+int
+dhd_rtt_init(dhd_pub_t *dhd);
+
+int
+dhd_rtt_deinit(dhd_pub_t *dhd);
 #endif /* __DHD_RTT_H__ */

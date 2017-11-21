@@ -1,7 +1,7 @@
 /*
  * Fundamental types and constants relating to WPA
  *
- * Copyright (C) 1999-2015, Broadcom Corporation
+ * Copyright (C) 1999-2016, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -21,7 +21,10 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: wpa.h 492853 2014-07-23 17:20:34Z $
+ *
+ * <<Broadcom-WL-IPTag/Open:>>
+ *
+ * $Id: wpa.h 518342 2014-12-01 23:21:41Z $
  */
 
 #ifndef _proto_wpa_h_
@@ -68,6 +71,8 @@ typedef BWL_PRE_PACKED_STRUCT struct
 #define WPA_IE_OUITYPE_LEN	4
 #define WPA_IE_FIXED_LEN	8
 #define WPA_IE_TAG_FIXED_LEN	6
+
+#define BIP_OUI_TYPE WPA2_OUI "\x06"
 
 typedef BWL_PRE_PACKED_STRUCT struct {
 	uint8 tag;	/* TAG */
@@ -195,7 +200,6 @@ typedef BWL_PRE_PACKED_STRUCT struct
 #define	WPA_CAP_WPA2_PREAUTH		RSN_CAP_PREAUTH
 
 #define WPA2_PMKID_COUNT_LEN	2
-#define RSN_GROUPMANAGE_CIPHER_LEN 4
 
 #ifdef BCMWAPI_WAI
 #define WAPI_CAP_PREAUTH		RSN_CAP_PREAUTH
