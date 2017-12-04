@@ -1657,8 +1657,8 @@ CONFIG_BCM4335=y
 # CONFIG_BCM4343 is not set
 # CONFIG_BCM4354 is not set
 # CONFIG_BCMDHD_COB is not set
-CONFIG_BCMDHD_FW_PATH="/system/etc/firmware/fw_bcmdhd.bin"
-CONFIG_BCMDHD_NVRAM_PATH="/system/etc/wifi/bcmdhd.cal"
+CONFIG_BCMDHD_FW_PATH="/system/vendor/firmware/fw_bcmdhd.bin"
+CONFIG_BCMDHD_NVRAM_PATH="/system/vendor/etc/wifi/bcmdhd.cal"
 CONFIG_LGE_BCM433X_PATCH=y
 CONFIG_BCMDHD_CONFIG_PATH="/data/misc/wifi/config"
 CONFIG_BCMDHD_GPIO_WL_RESET=36
