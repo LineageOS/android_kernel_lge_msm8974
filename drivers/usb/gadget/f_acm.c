@@ -178,12 +178,7 @@ static int acm_port_disconnect(struct f_acm *acm)
 /* notification endpoint uses smallish and infrequent fixed-size messages */
 
 #define GS_LOG2_NOTIFY_INTERVAL		5	/* 1 << 5 == 32 msec */
-#ifdef CONFIG_USB_G_LGE_ANDROID
-#define GS_NOTIFY_MAXPACKET		16	/* For LG host driver */
-#define GS_DESC_NOTIFY_MAXPACKET	64	/* For acm_hs_notify_desc */
-#else
 #define GS_NOTIFY_MAXPACKET		10	/* notification + 2 bytes */
-#endif
 
 /* interface and class descriptors: */
 
@@ -193,7 +188,7 @@ acm_iad_descriptor = {
 	.bDescriptorType =	USB_DT_INTERFACE_ASSOCIATION,
 
 	/* .bFirstInterface =	DYNAMIC, */
-	.bInterfaceCount = 	2,	/* control + data */
+	.bInterfaceCount = 	2,	// control + data
 	.bFunctionClass =	USB_CLASS_COMM,
 	.bFunctionSubClass =	USB_CDC_SUBCLASS_ACM,
 	.bFunctionProtocol =	USB_CDC_ACM_PROTO_AT_V25TER,
@@ -300,11 +295,7 @@ static struct usb_endpoint_descriptor acm_hs_notify_desc = {
 	.bDescriptorType =	USB_DT_ENDPOINT,
 	.bEndpointAddress =	USB_DIR_IN,
 	.bmAttributes =		USB_ENDPOINT_XFER_INT,
-#ifdef CONFIG_USB_G_LGE_ANDROID
-	.wMaxPacketSize =	cpu_to_le16(GS_DESC_NOTIFY_MAXPACKET),
-#else
 	.wMaxPacketSize =	cpu_to_le16(GS_NOTIFY_MAXPACKET),
-#endif
 	.bInterval =		GS_LOG2_NOTIFY_INTERVAL+4,
 };
 
@@ -603,26 +594,15 @@ static int acm_cdc_notify(struct f_acm *acm, u8 type, u16 value,
 	struct usb_ep			*ep = acm->notify;
 	struct usb_request		*req;
 	struct usb_cdc_notification	*notify;
-#ifndef CONFIG_USB_G_LGE_ANDROID
 	const unsigned			len = sizeof(*notify) + length;
-#endif
 	void				*buf;
 	int				status;
 
-#ifdef CONFIG_USB_G_LGE_ANDROID
-	unsigned char noti_buf[GS_NOTIFY_MAXPACKET];
-
-	memset(noti_buf, 0, GS_NOTIFY_MAXPACKET);
-#endif
 	req = acm->notify_req;
 	acm->notify_req = NULL;
 	acm->pending = false;
 
-#ifdef CONFIG_USB_G_LGE_ANDROID
-	req->length = GS_NOTIFY_MAXPACKET;
-#else
 	req->length = len;
-#endif
 	notify = req->buf;
 	buf = notify + 1;
 
@@ -632,12 +612,7 @@ static int acm_cdc_notify(struct f_acm *acm, u8 type, u16 value,
 	notify->wValue = cpu_to_le16(value);
 	notify->wIndex = cpu_to_le16(acm->ctrl_id);
 	notify->wLength = cpu_to_le16(length);
-#ifdef CONFIG_USB_G_LGE_ANDROID
-	memcpy(noti_buf, data, length);
-	memcpy(buf, noti_buf, GS_NOTIFY_MAXPACKET);
-#else
 	memcpy(buf, data, length);
-#endif
 
 	/* ep_queue() can complete immediately if it fills the fifo... */
 	spin_unlock(&acm->lock);
@@ -930,38 +905,6 @@ static inline bool can_support_cdc(struct usb_configuration *c)
 	return true;
 }
 
-#ifdef CONFIG_USB_G_LGE_MULTICONFIG_ATF_WA
-/*
- * B2-BSP-USB@lge.com
- * For support Android file transfer,
- * change ACM interfaceclass value when connect to OS X.
- * This is just workaround codes until 0x633e added to libmtp.
- */
-static int lge_acm_desc_change(struct usb_function *f, bool is_mac)
-{
-	struct usb_composite_dev *cdev = f->config->cdev;
-
-	if (is_mac == true) {
-		if (gadget_is_superspeed(cdev->gadget) && f->ss_descriptors)
-			((struct usb_interface_descriptor *)f->ss_descriptors[1])->bInterfaceClass = USB_CLASS_VENDOR_SPEC;
-		if (gadget_is_dualspeed(cdev->gadget) && f->hs_descriptors)
-			((struct usb_interface_descriptor *)f->hs_descriptors[1])->bInterfaceClass = USB_CLASS_VENDOR_SPEC;
-		((struct usb_interface_descriptor *)f->descriptors[1])->bInterfaceClass = USB_CLASS_VENDOR_SPEC;
-		pr_info("MAC ACM bInterfaceClass change to fs:%u\n",
-			((struct usb_interface_descriptor *)f->descriptors[1])->bInterfaceClass);
-	} else {
-		if (gadget_is_superspeed(cdev->gadget) && f->ss_descriptors)
-			((struct usb_interface_descriptor *)f->ss_descriptors[1])->bInterfaceClass = USB_CLASS_COMM;
-		if (gadget_is_dualspeed(cdev->gadget) && f->hs_descriptors)
-			((struct usb_interface_descriptor *)f->hs_descriptors[1])->bInterfaceClass = USB_CLASS_COMM;
-		((struct usb_interface_descriptor *)f->descriptors[1])->bInterfaceClass = USB_CLASS_COMM;
-		pr_info("WIN/LINUX ACM bInterfaceClass change to fs:%u\n",
-			((struct usb_interface_descriptor *)f->descriptors[1])->bInterfaceClass);
-	}
-	return 0;
-}
-#endif
-
 /**
  * acm_bind_config - add a CDC ACM function to a configuration
  * @c: the configuration to support the CDC ACM instance
@@ -1041,9 +984,7 @@ int acm_bind_config(struct usb_configuration *c, u8 port_num)
 	acm->port.func.set_alt = acm_set_alt;
 	acm->port.func.setup = acm_setup;
 	acm->port.func.disable = acm_disable;
-#ifdef CONFIG_USB_G_LGE_MULTICONFIG_ATF_WA
-	acm->port.func.desc_change = lge_acm_desc_change;
-#endif
+
 	status = usb_add_function(c, &acm->port.func);
 	if (status)
 		kfree(acm);
