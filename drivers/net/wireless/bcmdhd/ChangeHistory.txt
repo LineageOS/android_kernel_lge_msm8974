@@ -41,3 +41,55 @@ DHD 1.201.54.5 (2015.03.20)
 DHD 1.201.54.6 (2015.03.23)
   - Fixed invalid FW ram base address at BCM43455
 
+DHD 1.201.54.7 (2015.03.24)
+  - Added support for BCM4358
+
+DHD 1.201.54.8 (2015.06.16)
+  - Fixed kernel panic during pno operation (CSP#916549)
+  - Moved softAP BG mode definition to Kconfig (CSP#922520)
+  - Merged softAP throughput improvement parameters
+
+DHD 1.201.54.9 (2015.07.27)
+  - add private cmd interface for using roam_profile feature to support sameband roaming (CSP#944066)
+  
+DHD 1.201.54.10 (2016.05.13)
+  - add google security patches (CSP#1051460, CSP#1009440, CSP#1002266. CSP#100576)
+  - Fix Wi-Fi 802.11b 2.4GHz TIS Power loss 10dB (CSP#1000034)
+  
+DHD 1.201.54.11 (2016.06.24)
+  - Apply google security patches CVE-2016-0801. Security Enhancement for ETHER_TYPE_BRCM frame (CSP#1062605)
+  - These security patches have dependency with FW _6.37.32.23.43.18/7.35.170.12/7.45.61.2/7.45.87.3
+
+DHD 1.201.54.12 (2016.09.08)
+  - Google Security patch CVE-2016-3869 (CSP#1086098)
+  
+DHD 1.201.54.13 (2016.12.16)
+  - Google Security patch CVE-2016-3869 (CSP#1114036,  1104030, 1104026, 1104023)
+  
+DHD 1.201.54.14 (Not released)  
+ - CSP:1120247 Google Security patch A-32838767
+ - Google Security patch - ANDROID-32124445
+ - Google Security patch CVE-2017-0430
+ - Google Security patches - V2016122201, V2016122901, V2016122902
+ 
+DHD 1.201.54.15 - 2017.02.15
+  - CSP:1120247 Google Security patch A-32838767 (Build error fixed)
+ 
+DHD 1.201.54.16 - 2017.03.30
+ - CSP:1044652 Google Secuity patch A-34469904 prevent stack overflow in the wl_android_set_roampref function
+ - CSP:1137654 Google Security Patch  A-32474971 adding hotlist bssid counter element in wl_cfgvendor_hotlist_cfg
+ - CSP:1137656 Google Security Patch A-32125310 fix buffer overrun in wl_cfg80211_add_iw_ie
+ - CSP:1137656 Google Security Patch A-34197514 - fix buffer overrun in wl_run_escan
+ - CSP:1137656 Google Security Patch A-34203305 Fix buffer overrun in DHD dhd_wlfc_reorderinfo_indicate
+ 
+DHD 1.201.54.17 - 2017.05.17
+Others
+ - CS2614469: CVE-2017-0633 Enhanced wrong buffer usage in IOCTL path
+ - Google security fix: V2017030901-check length avoiding 16bit overflow in is_wlc_event_frame
+
+DHD 1.201.54.18 - 2017.06.22
+Security Patch
+ - CS3040954 Adding boundary check in wl_cfg80211_mgmt_tx(CVE-2017-0706 )
+ - CS3040954: Adding boundary check in wl_cfgvendor_significant_change_cfg(CVE-2017-0705)
+ 
+

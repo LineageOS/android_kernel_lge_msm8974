@@ -1,7 +1,7 @@
 /*
  * Linux cfg80211 Vendor Extension Code
  *
- * Copyright (C) 1999-2015, Broadcom Corporation
+ * Copyright (C) 1999-2016, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -159,6 +159,19 @@ enum gscan_attributes {
 	GSCAN_ATTRIBUTE_MIN_BREACHING,
 	GSCAN_ATTRIBUTE_SIGNIFICANT_CHANGE_BSSIDS,
 	GSCAN_ATTRIBUTE_SIGNIFICANT_CHANGE_FLUSH,
+
+	/* Roam SSID Whitelist and BSSID pref */
+	GSCAN_ATTRIBUTE_WHITELIST_SSID = 80,
+	GSCAN_ATTRIBUTE_NUM_WL_SSID,
+	GSCAN_ATTRIBUTE_WL_SSID_LEN,
+	GSCAN_ATTRIBUTE_WL_SSID_FLUSH,
+	GSCAN_ATTRIBUTE_WHITELIST_SSID_ELEM,
+	GSCAN_ATTRIBUTE_NUM_BSSID,
+	GSCAN_ATTRIBUTE_BSSID_PREF_LIST,
+	GSCAN_ATTRIBUTE_BSSID_PREF_FLUSH,
+	GSCAN_ATTRIBUTE_BSSID_PREF,
+	GSCAN_ATTRIBUTE_RSSI_MODIFIER,
+
 	GSCAN_ATTRIBUTE_MAX
 };
 
