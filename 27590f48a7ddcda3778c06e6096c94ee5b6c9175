@@ -2,6 +2,75 @@
   "comments": [
     {
       "key": {
+        "uuid": "9e698cff_df5f1b26",
+        "filename": "fs/namei.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 2470,
+      "author": {
+        "id": 17901
+      },
+      "writtenOn": "2018-10-01T21:59:34Z",
+      "side": 1,
+      "message": "instead of \" struct filename *pathname, \" used in 3.4",
+      "range": {
+        "startLine": 2470,
+        "startChar": 31,
+        "endLine": 2470,
+        "endChar": 51
+      },
+      "revId": "27590f48a7ddcda3778c06e6096c94ee5b6c9175",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "df9f4df9_b055c819",
+        "filename": "fs/namei.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 2475,
+      "author": {
+        "id": 17901
+      },
+      "writtenOn": "2018-10-01T21:59:34Z",
+      "side": 1,
+      "message": "Instead of QSTR_INIT(\"/\", 1);",
+      "range": {
+        "startLine": 2475,
+        "startChar": 33,
+        "endLine": 2475,
+        "endChar": 59
+      },
+      "revId": "27590f48a7ddcda3778c06e6096c94ee5b6c9175",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "b2137e7b_c9cf9a46",
+        "filename": "fs/namei.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 2507,
+      "author": {
+        "id": 17901
+      },
+      "writtenOn": "2018-10-01T21:59:34Z",
+      "side": 1,
+      "message": "instead of \" audit_inode(pathname, nd-\u003epath.dentry, 0); \"",
+      "range": {
+        "startLine": 2507,
+        "startChar": 1,
+        "endLine": 2507,
+        "endChar": 40
+      },
+      "revId": "27590f48a7ddcda3778c06e6096c94ee5b6c9175",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "a5aa170b_e04e56f5",
         "filename": "fs/namei.c",
         "patchSetId": 1
