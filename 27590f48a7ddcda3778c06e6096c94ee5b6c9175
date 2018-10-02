@@ -91,6 +91,30 @@
       "revId": "27590f48a7ddcda3778c06e6096c94ee5b6c9175",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "99272469_30aa71d9",
+        "filename": "fs/namei.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 2512,
+      "author": {
+        "id": 17901
+      },
+      "writtenOn": "2018-10-02T06:47:52Z",
+      "side": 1,
+      "message": "it looks better to backport from 3.10 https://github.com/LineageOS/android_kernel_htc_msm8994/commit/d18e9008c377dc6a6d2166a6840bf3a23a5867fd#diff-a487c0815879371669626c7f7a08c1b0\n\nand\n\nhttps://github.com/LineageOS/android_kernel_htc_msm8994/commit/47237687d73cbeae1dd7a133c3fc3d7239094568#diff-a487c0815879371669626c7f7a08c1b0\n\nand\n\nhttps://github.com/LineageOS/android_kernel_htc_msm8994/commit/30d904947459cca2beb69e0110716f5248b31f2a#diff-a487c0815879371669626c7f7a08c1b0\n\nwhich doesn\u0027t look easy...\nthe alternative is to change the finish_open() function for the 3.4 equivalent, which currently I don\u0027t know which one is...",
+      "parentUuid": "a5aa170b_e04e56f5",
+      "range": {
+        "startLine": 2512,
+        "startChar": 9,
+        "endLine": 2512,
+        "endChar": 20
+      },
+      "revId": "27590f48a7ddcda3778c06e6096c94ee5b6c9175",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
     }
   ]
 }
