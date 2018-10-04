@@ -115,6 +115,30 @@
       "revId": "27590f48a7ddcda3778c06e6096c94ee5b6c9175",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "e831a881_2fc82687",
+        "filename": "fs/namei.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 2512,
+      "author": {
+        "id": 17901
+      },
+      "writtenOn": "2018-10-04T10:32:40Z",
+      "side": 1,
+      "message": "In order to be able to integrate the new finish_open() function we also need this... https://github.com/LineageOS/android_kernel_htc_msm8994/commit/90ad1a8ecb9bfd5ff4503ac42cd049a97643ee51#diff-a487c0815879371669626c7f7a08c1b0",
+      "parentUuid": "99272469_30aa71d9",
+      "range": {
+        "startLine": 2512,
+        "startChar": 9,
+        "endLine": 2512,
+        "endChar": 20
+      },
+      "revId": "27590f48a7ddcda3778c06e6096c94ee5b6c9175",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
     }
   ]
 }
