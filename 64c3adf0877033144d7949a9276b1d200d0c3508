@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "962150b3_88a133f2",
+        "filename": "fs/open.c",
+        "patchSetId": 6
+      },
+      "lineNbr": 843,
+      "author": {
+        "id": 13648
+      },
+      "writtenOn": "2018-11-07T19:15:44Z",
+      "side": 1,
+      "message": "Tabzzz",
+      "range": {
+        "startLine": 843,
+        "startChar": 0,
+        "endLine": 843,
+        "endChar": 4
+      },
+      "revId": "64c3adf0877033144d7949a9276b1d200d0c3508",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
