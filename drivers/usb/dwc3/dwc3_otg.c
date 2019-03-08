@@ -748,9 +748,6 @@ static int dwc3_otg_set_power(struct usb_phy *phy, unsigned mA)
 				goto psy_error;
 		}
 #endif
-#ifndef CONFIG_USB_DWC3_LGE_SINGLE_PSY
-		dotg->charger->chg_type = DWC3_INVALID_CHARGER;
-#endif
 	}
 
 	power_supply_changed(dotg->psy);
