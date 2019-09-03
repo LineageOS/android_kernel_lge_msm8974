@@ -234,6 +234,7 @@
 #define NUM_KPDBL_LEDS			4
 #define KPDBL_MASTER_BIT_INDEX		0
 
+#define KPDBL_ID_NOTI	6
 #define KPDBL_ID_MISSED_NOTI	7
 #define KPDBL_ID_MISSED_NOTI_PINK	17
 #define KPDBL_ID_MISSED_NOTI_YELLOW	20
@@ -5002,6 +5003,37 @@ void set_kpdbl_pattern(int pattern)
 		kpdbl_lut_params.idx_len = 30;
 		kpdbl_lut_params.lut_pause_hi = 700;
 		kpdbl_lut_params.lut_pause_lo = 400;
+		kpdbl_lut_params.ramp_step_ms = 24;
+		kpdbl_lut_params.flags = 95;
+
+		pwm_lut_config(kpdbl_lpg1->kpdbl_cfg->pwm_cfg->pwm_dev, 200,
+			duty_pcts_kpdbl35, kpdbl_lut_params);
+		pwm_lut_config(kpdbl_lpg2->kpdbl_cfg->pwm_cfg->pwm_dev, 200,
+			duty_pcts_kpdbl35, kpdbl_lut_params);
+
+		pwm_enable(kpdbl_lpg1->kpdbl_cfg->pwm_cfg->pwm_dev);
+		pwm_enable(kpdbl_lpg2->kpdbl_cfg->pwm_cfg->pwm_dev);
+
+		kpdbl_lpg1->cdev.brightness = 127;
+		kpdbl_lpg2->cdev.brightness = 127;
+
+		qpnp_kpdbl_set(kpdbl_lpg1);
+		qpnp_kpdbl_set(kpdbl_lpg2);
+
+		is_kpdbl_on = 1;
+	} else if (pattern == KPDBL_ID_NOTI) {
+		pwm_disable(kpdbl_lpg1->kpdbl_cfg->pwm_cfg->pwm_dev);
+		pwm_disable(kpdbl_lpg2->kpdbl_cfg->pwm_cfg->pwm_dev);
+
+		kpdbl_lpg1->kpdbl_cfg->pwm_cfg->mode = LPG_MODE;
+		kpdbl_lpg1->kpdbl_cfg->pwm_cfg->default_mode = LPG_MODE;
+		kpdbl_lpg2->kpdbl_cfg->pwm_cfg->mode = LPG_MODE;
+		kpdbl_lpg2->kpdbl_cfg->pwm_cfg->default_mode = LPG_MODE;
+
+		kpdbl_lut_params.start_idx = -1;
+		kpdbl_lut_params.idx_len = 30;
+		kpdbl_lut_params.lut_pause_hi = 120;
+		kpdbl_lut_params.lut_pause_lo = 5700;
 		kpdbl_lut_params.ramp_step_ms = 24;
 		kpdbl_lut_params.flags = 95;
 
