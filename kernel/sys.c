@@ -488,7 +488,8 @@ SYSCALL_DEFINE4(reboot, int, magic1, int, magic2, unsigned int, cmd,
 	mutex_lock(&reboot_mutex);
 	switch (cmd) {
 	case LINUX_REBOOT_CMD_RESTART:
-		kernel_restart(NULL);
+		buffer[0] = '\0';
+		kernel_restart(buffer);
 		break;
 
 	case LINUX_REBOOT_CMD_CAD_ON:
